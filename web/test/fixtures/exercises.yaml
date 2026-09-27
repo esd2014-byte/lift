@@ -1,0 +1,43 @@
+# SYNTHETIC FIXTURE - a small library in the same shapes as library/exercises.yaml.
+#
+# Values: loved | fine | untested | disliked | forbidden
+# The file mixes block entries and flow entries, and it is heavily commented.
+# The tolerance editor has to rewrite one value without disturbing any of that.
+meta:
+  updated: 2030-01-01
+  tolerance_reviewed_by_eli: false     # <<< flips to true after the first rating
+
+# ---------------------------------------------------------------- ANCHORS
+anchors:
+  - id: voltra_belt_squat
+    name: Voltra Belt Squat
+    anchor: true
+    station: voltra_platform
+    pattern: squat
+    muscles: {primary: [quads, glutes], secondary: [adductors]}
+    progression: load
+    tolerance: untested
+    note: Zero spinal compression.
+
+  - id: voltra_deadlift
+    name: Voltra Deadlift
+    anchor: true
+    station: voltra_platform
+    pattern: hinge
+    doubler_required: true          # working weight exceeds the single-cable ceiling
+    progression: load
+    tolerance: loved
+
+# ---------------------------------------------------------------- PUSH
+push:
+  - {id: db_lateral_raise, name: DB Lateral Raise, station: small_db, pattern: shoulder_abduction,
+     muscles: {primary: [side_delt]}, progression: reps, tolerance: fine,
+     note: "Free station - supersets with any cable block."}
+  - {id: db_skullcrusher, name: DB Skullcrusher, station: db, pattern: elbow_extension,
+     muscles: {primary: [triceps]}, progression: load, tolerance: fine}
+
+# ---------------------------------------------------------------- PULL
+pull:
+  - {id: cable_pulldown, name: Cable Lat Pulldown, station: voltra_pullup_bar, pattern: vertical_pull,
+     muscles: {primary: [lats]}, progression: load, tolerance: loved,
+     note: "MAG bar ONLY. Straight-bar pronated wide grip is excluded."}

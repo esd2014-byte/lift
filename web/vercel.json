@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/hevy-sync",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/voltra-sync",
+      "schedule": "0 10 * * *"
+    }
+  ]
+}

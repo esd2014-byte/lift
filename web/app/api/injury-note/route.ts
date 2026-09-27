@@ -1,0 +1,34 @@
+import { NextRequest, NextResponse } from "next/server";
+import { readFile, writeFile } from "@/lib/github";
+import { todayISO } from "@/lib/date";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * Append an injury note - something healing, something new.
+ *
+ * Written to its own log rather than edited into athlete/injuries.yaml. That file
+ * holds the standing rules that veto exercise selection, and those should change
+ * deliberately, not by appending a note from a phone at 7am. The morning routine
+ * reads this log, reasons about it, and proposes changes to the rules.
+ */
+export async function POST(req: NextRequest) {
+  try {
+    const { note } = (await req.json()) as { note?: string };
+    const text = (note ?? "").trim();
+    if (!text) return NextResponse.json({ error: "note is required" }, { status: 400 });
+    if (text.length > 2000) return NextResponse.json({ error: "note too long" }, { status: 400 });
+
+    const path = "logs/injury-notes.md";
+    const existing = (await readFile(path)) ??
+      "# Injury notes\n\nAppended from the app. The morning routine reads these and proposes\nchanges to `athlete/injuries.yaml` - it does not edit the standing rules directly.\n";
+
+    const today = todayISO();
+    const entry = `\n## ${today}\n\n${text}\n`;
+    await writeFile(path, existing.trimEnd() + "\n" + entry, `Injury note ${today}`);
+
+    return NextResponse.json({ ok: true, date: today });
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
+}
