@@ -71,7 +71,11 @@ export type VoltraSession = {
  * "Free Exercises" names no movement, so it carries no exercises and can't feed a
  * strength number - but it is still a day Eli trained, so it counts toward the streak.
  */
-export function mergeSources(hevy: DigestSession[], voltra: VoltraSession[]): DigestSession[] {
+export function mergeSources(
+  hevy: DigestSession[],
+  voltra: VoltraSession[],
+  liftDates: string[] = []
+): DigestSession[] {
   const asSessions: DigestSession[] = voltra.map((v) => ({
     date: v.date,
     source: "voltra",
@@ -90,7 +94,10 @@ export function mergeSources(hevy: DigestSession[], voltra: VoltraSession[]): Di
         })),
   }));
   const fromHevy = hevy.map((s) => ({ ...s, source: "hevy" as const }));
-  return [...fromHevy, ...asSessions].sort((a, b) => (a.date < b.date ? 1 : -1));
+  // A workout started in Lift is first-hand evidence of a training day, even before
+  // (or without) either sync picking it up. It carries no sets, so no strength data.
+  const fromLift: DigestSession[] = liftDates.map((date) => ({ date, source: "lift", title: "Lift workout", exercises: [] }));
+  return [...fromHevy, ...asSessions, ...fromLift].sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
 const DAY_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
@@ -122,7 +129,7 @@ function e1rm(lb: number, reps: number, rpe?: number | null) {
 
 type DigestSession = {
   date: string;
-  source?: "hevy" | "voltra";
+  source?: "hevy" | "voltra" | "lift";
   title: string;
   exercises: Array<{
     name: string;

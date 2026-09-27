@@ -185,10 +185,11 @@ def build_routine(day_id, day, lib, tmpl, notes_map):
         for ex_id in ids:
             ex = lib[ex_id]
             reps = block.get("reps")
+            # No station ids ("[nuobell]"): they meant something to the generator
+            # and nothing to a person mid-set.
             note_parts = [f"RPE {block['rpe']}"]
-            note_parts.append(f"[{ex['station']}]")
             if block.get("droppable"):
-                note_parts.append("[DROP if short on time]")
+                note_parts.append("Drop if short on time")
             if notes_map.get(ex_id):
                 note_parts.append(notes_map[ex_id])
             if block.get("doubler"):
@@ -218,8 +219,9 @@ def build_routine(day_id, day, lib, tmpl, notes_map):
     )
     note = f"Program v1 · {kind} day · {day['minutes'][0]}-{day['minutes'][1]} min"
     if voltra_count:
-        note += (f" · {voltra_count} Voltra exercise(s) NOT listed here - they're in "
-                 f"today's Beyond+ session. Full running order is in the Lift app.")
+        plural = "exercise is" if voltra_count == 1 else "exercises are"
+        note += (f" · {voltra_count} cable {plural} on the Voltra (Beyond+), not here."
+                 f" Start the workout in Lift for today's loads and running order.")
     return {"routine": {
         "title": f"Day {day_id} — {day['name']}",
         "notes": note,

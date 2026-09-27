@@ -1,7 +1,8 @@
-import { parse } from "yaml";
 import { readFile, listDir } from "./github";
 import { todayISO } from "./date";
 import { rollingAverage } from "./bodyweight";
+import { parseDayNames } from "./program";
+import { parseLog, type WorkoutEntry } from "./workouts";
 import type { BriefData } from "./types";
 import type { DigestSession, VoltraSession } from "./metrics";
 
@@ -32,6 +33,7 @@ export type DayState = {
   restDays: string[];
   /** { A: "Push", B: "Pull", ... } - used to name the Hevy routine a variant points at. */
   dayNames: Record<string, string>;
+  workouts: WorkoutEntry[];
 };
 
 function daysBetween(a: string, b: string) {
@@ -51,7 +53,7 @@ async function readJson<T>(path: string): Promise<T | null> {
 export async function loadDay(): Promise<DayState> {
   const today = todayISO();
 
-  const [briefFiles, hevy, voltra, bwCsv, measCsv, photoFiles, restLog, programRaw] = await Promise.all([
+  const [briefFiles, hevy, voltra, bwCsv, measCsv, photoFiles, restLog, programRaw, workoutsRaw] = await Promise.all([
     listDir("logs/briefs"),
     readJson<{ synced_at: string; sessions: DigestSession[] }>("logs/hevy/recent.json"),
     readJson<{ synced_at: string; unnamed_count: number; sessions: VoltraSession[] }>("logs/voltra/recent.json"),
@@ -60,17 +62,10 @@ export async function loadDay(): Promise<DayState> {
     listDir("logs/photos"),
     readJson<Array<{ date: string; reason: string }>>("logs/rest-days.json"),
     readFile("program/current.yaml"),
+    readFile("logs/workouts.json"),
   ]);
 
-  const dayNames: Record<string, string> = {};
-  try {
-    const program = parse(programRaw ?? "") as { days?: Record<string, { name?: string }> };
-    for (const [id, d] of Object.entries(program?.days ?? {})) {
-      if (d?.name) dayNames[id] = d.name;
-    }
-  } catch {
-    // A malformed program shouldn't blank the page; the button falls back to the day id.
-  }
+  const dayNames = parseDayNames(programRaw);
 
   const mdFiles = briefFiles.filter((f) => f.endsWith(".md")).sort();
   const briefDate = mdFiles.includes(`${today}.md`)
@@ -127,5 +122,6 @@ export async function loadDay(): Promise<DayState> {
     photos: { lastDate: lastPhoto, daysSince: lastPhoto ? daysBetween(lastPhoto, today) : null },
     restDays: (restLog ?? []).map((r) => r.date),
     dayNames,
+    workouts: parseLog(workoutsRaw),
   };
 }

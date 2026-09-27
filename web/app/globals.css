@@ -323,3 +323,52 @@ details.adjust > summary:hover { color: var(--ink); }
 .launchbtn.off {
   background: transparent; color: var(--muted); border-color: var(--border-strong);
 }
+
+/* ---- persistent header + tabs ------------------------------------------ */
+/* The standalone iPhone app draws under the status bar unless the page pads for it. */
+.wrap { padding-top: env(safe-area-inset-top); }
+header.top { padding-block: 20px 16px; }
+h1.hype { font-size: 1.75rem; line-height: 1.15; }
+h1.hype button {
+  all: unset; cursor: pointer; font: inherit; color: inherit; letter-spacing: -.02em;
+}
+h1.hype button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+.date {
+  font-family: Archivo, system-ui, sans-serif; font-size: 1.5rem; font-weight: 700;
+  letter-spacing: -.02em; line-height: 1.15; margin: 4px 0 0; color: var(--ink-2);
+}
+.weekcard { margin-top: 14px; }
+.weekhead { display: flex; align-items: baseline; margin-bottom: 8px; }
+.weekhead .meta { margin-left: auto; font-size: .78rem; color: var(--muted); }
+
+.tabs {
+  position: sticky; top: 0; z-index: 5;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+  margin-inline: -16px; padding: calc(8px + env(safe-area-inset-top)) 16px 8px;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+}
+.tab {
+  font-family: Archivo, system-ui, sans-serif; font-size: .78rem; font-weight: 600;
+  min-height: 44px; padding: 6px 4px; border-radius: 9px; cursor: pointer; line-height: 1.2;
+  background: transparent; color: var(--muted); border: 1px solid transparent;
+}
+.tab[aria-selected="true"] { background: var(--surface); color: var(--ink); border-color: var(--border-strong); box-shadow: var(--shadow); }
+[role="tabpanel"] > section:first-child { border-top: 0; }
+
+/* ---- today: start / end ------------------------------------------------ */
+.variant-line { margin: 2px 0 0; font-size: .9rem; color: var(--ink-2); }
+button.btn.big { min-height: 56px; font-size: 1.05rem; border-radius: 12px; }
+button.btn.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
+button.btn:disabled { opacity: .55; cursor: default; }
+.timer { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+.timer-value { font-size: 2.2rem; font-weight: 600; letter-spacing: -.02em; line-height: 1; }
+.hint { font-size: .8rem; color: var(--muted); margin: 8px 0 0; line-height: 1.45; }
+.warn-text { color: var(--due); }
+.bad-text { color: var(--bad); }
+.handoff { font-size: .84rem; color: var(--ink-2); margin: 14px 0 0; }
+.where {
+  font-family: Archivo, sans-serif; font-size: .64rem; font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase; padding: 1px 5px; border-radius: 4px; border: 1px solid currentColor;
+}
+.where-voltra { color: var(--accent); }
+.where-hevy { color: var(--ink-2); }
