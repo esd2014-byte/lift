@@ -5,7 +5,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node test/markdown.test.mjs && node test/library.test.mjs && node test/metrics.test.mjs"
+    "test": "node test/markdown.test.mjs && node test/library.test.mjs && node test/metrics.test.mjs && node test/workout.test.mjs"
   },
   "dependencies": {
     "next": "^16.3.5",

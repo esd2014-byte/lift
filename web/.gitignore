@@ -1,2 +1,3 @@
 .vercel
 !.env.example
+.test-build/

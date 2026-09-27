@@ -54,3 +54,55 @@ export type Workout = {
 export async function listWorkouts(): Promise<Workout[]> {
   return (await paginate("/workouts", "workouts")) as Workout[];
 }
+
+async function send(method: "POST" | "PUT", path: string, body: unknown) {
+  const res = await fetch(BASE + path, {
+    method,
+    headers: { "api-key": key(), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    const err = new Error(`Hevy ${method} ${path}: ${res.status} ${text.slice(0, 200)}`);
+    (err as Error & { status?: number }).status = res.status;
+    throw err;
+  }
+  return text ? JSON.parse(text) : {};
+}
+
+export type RoutineSet = {
+  type: "normal" | "warmup";
+  weight_kg: number | null;
+  reps: number | null;
+  duration_seconds?: number | null;
+};
+
+export type RoutineExercise = {
+  exercise_template_id: string;
+  superset_id: number | null;
+  rest_seconds?: number | null;
+  notes: string;
+  sets: RoutineSet[];
+};
+
+export type Routine = {
+  id: string;
+  title: string;
+  exercises: Array<RoutineExercise & { title: string }>;
+};
+
+export async function listRoutines(): Promise<Routine[]> {
+  return (await paginate("/routines", "routines")) as Routine[];
+}
+
+export async function createRoutine(routine: { title: string; notes: string; exercises: RoutineExercise[] }) {
+  const d = await send("POST", "/routines", { routine: { ...routine, folder_id: null } });
+  // The API has returned both { routine: {...} } and { routine: [{...}] }.
+  const r = Array.isArray(d?.routine) ? d.routine[0] : d?.routine;
+  return r as { id: string };
+}
+
+export async function updateRoutine(id: string, routine: { title: string; notes: string; exercises: RoutineExercise[] }) {
+  return send("PUT", `/routines/${id}`, { routine });
+}

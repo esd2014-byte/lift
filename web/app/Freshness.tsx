@@ -25,7 +25,7 @@ export default function Freshness({
     setBusy(true);
     setFailed(false);
     try {
-      const res = await fetch("/api/refresh");
+      const res = await fetch("/api/refresh", { method: "POST" });
       if (!res.ok) throw new Error(String(res.status));
       setDone(true);
       window.location.reload();
@@ -60,7 +60,7 @@ export default function Freshness({
     <button className="freshness stale" onClick={refresh} disabled={busy}>
       <span className="fdot" />
       <span>
-        {busy ? "Refreshing…" : done ? "Refreshed" : failed ? <>Refresh failed · <u>Try again</u></> : <>Last written {label} · <u>Refresh</u></>}
+        {busy ? "Refreshing…" : done ? "Refreshed" : failed ? <>Refresh failed · <u>Try again</u></> : briefDate ? <>Showing {label}&apos;s plan · <u>Refresh</u></> : <>No brief yet · <u>Refresh</u></>}
       </span>
     </button>
   );

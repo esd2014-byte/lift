@@ -1,0 +1,92 @@
+import { NextRequest, NextResponse } from "next/server";
+import { readFile, writeFile } from "@/lib/github";
+import { todayISO } from "@/lib/date";
+import { parseDayNames } from "@/lib/program";
+import { dayTitle } from "@/lib/session";
+import { pushVoltraSession } from "@/lib/voltraSession";
+import { pushHevyRoutine } from "@/lib/hevyRoutine";
+import { syncAll } from "@/lib/sync";
+import { closeUnended, end, parseLog, start } from "@/lib/workouts";
+import { VARIANT_ORDER, type BriefData } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+const LOG = "logs/workouts.json";
+const VARIANTS = "logs/variants.json";
+
+/**
+ * Start, end, or close a workout.
+ *
+ *   start   records the chosen variant (the coach's signal), then puts the workout
+ *           where it will be done: a "Today" routine in Hevy with target weights,
+ *           and the day's session on the Voltra.
+ *   end     records the elapsed time, then pulls Hevy and Voltra so today's work
+ *           counts today rather than after tomorrow's 6am sync.
+ *   close   closes a workout that was never ended, without inventing a duration.
+ *
+ * The pushes and syncs report their own failures; neither can undo a start or end.
+ */
+export async function POST(req: NextRequest) {
+  try {
+    const body = (await req.json().catch(() => ({}))) as { action?: string; variant?: string; briefDate?: string };
+    const now = new Date().toISOString();
+    const log = parseLog(await readFile(LOG));
+
+    if (body.action === "start") {
+      const variant = String(body.variant ?? "");
+      if (!(VARIANT_ORDER as readonly string[]).includes(variant)) {
+        return NextResponse.json({ error: "unknown variant" }, { status: 400 });
+      }
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(body.briefDate ?? "") ? body.briefDate! : todayISO();
+      const [briefRaw, programRaw, variantsRaw] = await Promise.all([
+        readFile(`logs/briefs/${date}.json`),
+        readFile("program/current.yaml"),
+        readFile(VARIANTS),
+      ]);
+      if (!briefRaw) return NextResponse.json({ error: `no brief for ${date}` }, { status: 404 });
+      const brief = JSON.parse(briefRaw) as BriefData;
+      if (!brief.variants?.[variant]) return NextResponse.json({ error: "variant not in brief" }, { status: 400 });
+      const dayNames = parseDayNames(programRaw);
+
+      const today = todayISO();
+      const entry = { date: today, variant, day: dayTitle(brief, brief.variants[variant], dayNames), started_at: now };
+      await writeFile(LOG, JSON.stringify(start(log, entry), null, 2) + "\n", `Workout started ${today}: ${variant}`);
+
+      // The committed choice, in the file the coach already reads.
+      let variants: Array<{ date: string; variant: string; at: string }> = [];
+      try {
+        variants = JSON.parse(variantsRaw ?? "[]");
+      } catch {}
+      variants = variants.filter((r) => r.date !== today);
+      variants.push({ date: today, variant, at: now });
+      variants.sort((a, b) => (a.date < b.date ? -1 : 1));
+      await writeFile(VARIANTS, JSON.stringify(variants, null, 2) + "\n", `Variant ${today}: ${variant}`);
+
+      const [hevy, voltra] = await Promise.all([
+        pushHevyRoutine(brief, variant, dayNames),
+        pushVoltraSession(brief, variant, dayNames),
+      ]);
+      return NextResponse.json({ ok: true, entry, hevy, voltra });
+    }
+
+    if (body.action === "end") {
+      const { log: next, entry } = end(log, now);
+      if (!entry) return NextResponse.json({ error: "no workout is running" }, { status: 409 });
+      const took = entry.minutes != null ? `${entry.minutes} min` : "duration unknown";
+      await writeFile(LOG, JSON.stringify(next, null, 2) + "\n", `Workout ended ${entry.date}: ${took}`);
+      const syncs = await syncAll("workout ended");
+      return NextResponse.json({ ok: true, entry, syncs });
+    }
+
+    if (body.action === "close") {
+      await writeFile(LOG, JSON.stringify(closeUnended(log), null, 2) + "\n", "Workout closed without an end time");
+      return NextResponse.json({ ok: true });
+    }
+
+    return NextResponse.json({ error: "action must be start, end or close" }, { status: 400 });
+  } catch (err) {
+    console.error("workout failed", err);
+    return NextResponse.json({ error: (err instanceof Error ? err.message : String(err)).slice(0, 300) }, { status: 500 });
+  }
+}
