@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { logged } from "@/lib/log";
 import { publicMessage } from "@/lib/errors";
 import { requireAuth } from "@/lib/guard";
-import { updateFile } from "@/lib/github";
+import { updateFile } from "@/lib/store";
 import { applyTolerances, TOLERANCES } from "@/lib/tolerance";
 
 export const dynamic = "force-dynamic";

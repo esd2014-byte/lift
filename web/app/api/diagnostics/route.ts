@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logged } from "@/lib/log";
-import { readMany, tokenExpiry } from "@/lib/github";
+import { tokenExpiry } from "@/lib/github";
+import { readMany } from "@/lib/store";
 import { todayISO, ZONE } from "@/lib/date";
 import { requireAuth } from "@/lib/guard";
 import { verifySession, SESSION_COOKIE } from "@/lib/auth";

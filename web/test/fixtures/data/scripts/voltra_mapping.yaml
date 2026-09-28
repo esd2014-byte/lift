@@ -1,0 +1,13 @@
+actions:
+  cable_press: 51
+  cable_pushdown: 102
+  cable_pulldown: 1
+unilateral:
+  - cable_press
+estimate_from:
+  cable_press: {lift: db_bench, ratio: 0.8}
+defaults:
+  workout_mode: 1
+  rest_sec: 90
+  tag: 0
+  direction: 0

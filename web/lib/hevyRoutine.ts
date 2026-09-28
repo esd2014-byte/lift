@@ -1,6 +1,6 @@
 import { publicMessage } from "./errors";
 import { parse } from "yaml";
-import { readFile, writeFile } from "./github";
+import { readFile, writeFile } from "./store";
 import { createRoutine, listRoutines, updateRoutine, type Routine, type RoutineExercise } from "./hevy";
 import { parseReps, libraryIds, lookupId } from "./voltraSession";
 import { dayTitle, hevyTitle, isVoltraRow, voltraTitle } from "./session";

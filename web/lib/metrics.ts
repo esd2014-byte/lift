@@ -1,5 +1,3 @@
-import type { Workout } from "./hevy";
-
 /**
  * Streak and strength numbers, derived from the Hevy and Voltra digests in the repo.
  *

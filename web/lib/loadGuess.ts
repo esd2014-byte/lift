@@ -1,5 +1,5 @@
 import { parse } from "yaml";
-import { readMany } from "./github";
+import { readMany } from "./store";
 import { hevyTitles } from "./hevyRoutine";
 import { libraryIds, lookupId } from "./voltraSession";
 import type { BriefData, Row } from "./types";

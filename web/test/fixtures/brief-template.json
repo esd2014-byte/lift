@@ -1,0 +1,30 @@
+{
+  "date": "{{DATE}}",
+  "generated_at": "{{DATE}}T10:07:00Z",
+  "day": "A",
+  "day_name": "Push",
+  "day_type": "real",
+  "headline": "Push day. Press first, then the cable work.",
+  "variants": {
+    "full": {
+      "label": "Full",
+      "meta": "50 min · the whole session",
+      "duration": "50 min",
+      "note": {"kind": "accent", "text": "Bench is the anchor: top of the range at 60, so try 65."},
+      "rows": [
+        {"superset": null, "name": "DB Bench Press", "station": "Dumbbells", "reps": "4 × 6-10", "rpe": 8, "load_lb": 65, "note": "anchor"},
+        {"superset": "A", "name": "Cable Single-Arm Press", "station": "Voltra", "reps": "3 × 10-15", "rpe": 8},
+        {"superset": "A", "name": "Cable Pushdown", "station": "Voltra", "reps": "3 × 10-15", "rpe": 9},
+        {"superset": null, "name": "Dead Bug", "station": "Floor", "reps": "3 × 10", "rpe": 7}
+      ]
+    },
+    "minimum": {
+      "label": "Minimum",
+      "meta": "15 min · the anchor only",
+      "duration": "15 min",
+      "rows": [
+        {"superset": null, "name": "DB Bench Press", "station": "Dumbbells", "reps": "3 × 6-10", "rpe": 8, "load_lb": 65}
+      ]
+    }
+  }
+}

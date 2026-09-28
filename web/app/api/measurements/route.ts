@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { logged } from "@/lib/log";
 import { publicMessage } from "@/lib/errors";
 import { requireAuth } from "@/lib/guard";
-import { updateFile } from "@/lib/github";
+import { updateFile } from "@/lib/store";
 import { todayISO } from "@/lib/date";
+import { upsertCsvDay } from "@/lib/dailyLog";
 
 export const dynamic = "force-dynamic";
 
@@ -33,12 +34,7 @@ async function handlePOST(req: NextRequest) {
     const today = todayISO();
     await updateFile(
       path,
-      (cur) => {
-        const rows = (cur ?? header + "\n").trimEnd().split("\n").slice(1).filter((r) => r && !r.startsWith(`${today},`));
-        rows.push(`${today},${values.waist ?? ""},${values.arm ?? ""},${values.shoulder ?? ""}`);
-        rows.sort();
-        return [header, ...rows].join("\n") + "\n";
-      },
+      (cur) => upsertCsvDay(cur, header, today, `${values.waist ?? ""},${values.arm ?? ""},${values.shoulder ?? ""}`).text,
       `Measurements ${today}`
     );
     return NextResponse.json({ ok: true, date: today, values });

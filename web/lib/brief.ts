@@ -1,4 +1,4 @@
-import { readMany } from "./github";
+import { readMany } from "./store";
 import { todayISO } from "./date";
 import { rollingAverage } from "./bodyweight";
 import { parseDayNames } from "./program";

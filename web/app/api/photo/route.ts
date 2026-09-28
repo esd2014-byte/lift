@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { logged } from "@/lib/log";
 import { publicMessage } from "@/lib/errors";
 import { requireAuth } from "@/lib/guard";
-import { writeBinaryFile } from "@/lib/github";
+import { writeBinaryFile } from "@/lib/store";
 import { todayISO } from "@/lib/date";
 import { MAX_PHOTO_BYTES, base64Bytes } from "@/lib/limits";
 

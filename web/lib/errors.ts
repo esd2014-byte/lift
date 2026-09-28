@@ -13,6 +13,8 @@ const OURS =
 
 export function publicMessage(err: unknown): string {
   if (err instanceof GitHubError) return err.message;
+  // The demo refuses writes; say so plainly.
+  if (err instanceof Error && err.name === "ReadOnlyError") return err.message;
   const msg = err instanceof Error ? err.message : String(err);
   // Keep the status code from an upstream failure, drop its response body.
   if (OURS.test(msg)) return msg.replace(/(: \d{3})\s.*$/s, "$1").slice(0, 200);
