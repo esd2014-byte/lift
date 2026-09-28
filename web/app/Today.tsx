@@ -14,7 +14,7 @@ const META: Record<string, { label: string; fallback: string }> = {
   travel: { label: "Traveling", fallback: "hotel or no kit" },
 };
 
-type Push = { ok: boolean; title?: string; action?: string; error?: string; skipped?: string[] };
+type Push = { ok: boolean; title?: string; action?: string; error?: string; skipped?: string[]; note?: string };
 type Sync = { source: string; ok: boolean; error?: string };
 
 function clock(ms: number) {
@@ -178,8 +178,9 @@ export default function Today({
   const pushLine = (p: Push | undefined, app: string) => {
     if (!p || p.action === "none") return null;
     if (!p.ok) return <span className="bad-text">{app} not updated: {p.error}. </span>;
-    const extra = p.skipped?.length ? ` (left out: ${p.skipped.join(", ")})` : "";
-    return <span>{app}: &ldquo;{p.title}&rdquo; {p.action}{extra}. </span>;
+    const extra = [p.skipped?.length ? `left out: ${p.skipped.join(", ")}` : "", p.note ?? ""].filter(Boolean).join("; ");
+    const verb = p.action === "kept" ? "already there" : p.action;
+    return <span>{app}: &ldquo;{p.title}&rdquo; {verb}{extra ? ` (${extra})` : ""}. </span>;
   };
 
   return (

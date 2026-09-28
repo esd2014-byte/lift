@@ -4,8 +4,8 @@ import { useState } from "react";
 
 /**
  * Says whether what you're looking at is today's, and gives you a way to fix it
- * when it isn't. Refresh re-pulls Hevy; it can't regenerate the brief (that's the
- * cloud routine's job and it needs a model), so the copy doesn't pretend otherwise.
+ * when it isn't. Refresh re-pulls Hevy and the Voltra; it can't write the brief
+ * (that's the morning routine's job and it needs a model), so the copy says which.
  */
 export default function Freshness({
   stale,
@@ -60,7 +60,7 @@ export default function Freshness({
     <button className="freshness stale" onClick={refresh} disabled={busy}>
       <span className="fdot" />
       <span>
-        {busy ? "Refreshing…" : done ? "Refreshed" : failed ? <>Refresh failed · <u>Try again</u></> : briefDate ? <>Showing {label}&apos;s plan · <u>Refresh</u></> : <>No brief yet · <u>Refresh</u></>}
+        {busy ? "Syncing Hevy and Voltra…" : done ? "Synced" : failed ? <>Sync failed · <u>Try again</u></> : briefDate ? <>Today&apos;s plan isn&apos;t written yet · showing {label}&apos;s · <u>Sync workouts</u></> : <>No plan yet · <u>Sync workouts</u></>}
       </span>
     </button>
   );

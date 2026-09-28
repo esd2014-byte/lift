@@ -101,12 +101,27 @@ export function libraryIds(libRaw: string | null): Map<string, string> {
 export type VoltraPushResult = {
   ok: boolean;
   title?: string;
-  action?: "created" | "updated" | "none";
+  action?: "created" | "updated" | "kept" | "none";
   exercises?: number;
   skipped?: string[];
   guessedLoads?: string[];
+  /** Something worth knowing that didn't stop the push. */
+  note?: string;
   error?: string;
 };
+
+/** The create request around a list of items. Pure, so the contract is testable. */
+export function sessionPayload(title: string, items: SessionItem[]): SessionPayload {
+  return {
+    title,
+    sessionConfig: {},
+    blockList: [{ blockType: 1, itemList: items }],
+    originSessionId: null,
+    accountRole: 0,
+    connectionMode: 0,
+    label: 0,
+  };
+}
 
 export async function pushVoltraSession(
   brief: BriefData,
@@ -141,14 +156,16 @@ export async function pushVoltraSession(
       const load = clampLoad(lb);
       if (guessed) guessedLoads.push(`${row.name} @ ${load} lb`);
 
+      const oneArm = mapping.unilateral?.includes(exId!) ?? false;
       items.push({
         itemGroupPosition: position++,
         workoutMode: mapping.defaults.workout_mode,
+        handMode: oneArm ? 1 : 2,
         actionId,
         actionModeConfig: {},
         // A one-arm movement can't be sent as bilateral (direction 0): each set
         // becomes one per side, alternating.
-        itemDetails: mapping.unilateral?.includes(exId!)
+        itemDetails: oneArm
           ? Array.from({ length: sets * 2 }, (_, i) => ({
               position: i + 1,
               repCount: reps,
@@ -161,27 +178,47 @@ export async function pushVoltraSession(
               repCount: reps,
               restTime: mapping.defaults.rest_sec,
               tag: mapping.defaults.tag,
-              modeConfig: { baseValue: load, direction: mapping.defaults.direction },
+              modeConfig: { baseValue: load, direction: 0 },
             })),
       });
     }
 
     if (!items.length) return { ok: true, action: "none", exercises: 0, skipped };
 
-    const title = voltraTitle(dayTitle(brief, variant, dayNames), brief.date);
-    const payload: SessionPayload = { title, sessionConfig: {}, blockList: [{ blockType: 1, itemList: items }] };
+    const title = voltraTitle(dayTitle(brief, variant, dayNames), brief.date).slice(0, 50).trim();
+    const payload = sessionPayload(title, items);
 
     // Today's session, whatever it was called when first pushed: the day can change
-    // with the variant, and older sessions were titled by date alone.
+    // with the variant, and older sessions were titled by date alone. Beyond+ refuses
+    // a second session with the same title, so an existing one is updated instead.
     const dateSuffix = `(${shortDate(brief.date)})`;
     const legacy = brief.date.replace(/-/g, ".");
     const before = await listSessions();
     const existing = before.sessions.find(
       (s) => s.title === title || s.title.endsWith(dateSuffix) || s.title === legacy
     );
-    const reply = existing ? await updateSession(existing.id, payload) : await createSession(payload);
+
+    let action: "created" | "updated" | "kept" = "created";
+    let note: string | undefined;
+    let reply: unknown;
+    if (existing) {
+      try {
+        reply = await updateSession(existing.id, payload);
+        action = "updated";
+      } catch (err) {
+        // Today's session is already on the device under the right name: use it
+        // as it is, and say the refresh didn't happen.
+        if (existing.title === title) {
+          console.warn(`voltra session update failed; keeping "${title}"`, err);
+          return { ok: true, title, action: "kept", exercises: items.length, skipped, guessedLoads, note: `couldn't update it (${publicMessage(err)})` };
+        }
+        // A differently named session for today (another variant): make today's anew.
+        note = `"${existing.title}" is still on the device`;
+      }
+    }
+    if (action === "created") reply = await createSession(payload);
     const replyText = JSON.stringify(reply ?? {}).slice(0, 300);
-    console.info(`voltra session ${existing ? "update" : "create"} "${title}": ${replyText}`);
+    console.info(`voltra session ${action} "${title}": ${replyText}`);
 
     // Read it back. The device API can answer a request it didn't act on with a
     // success status (a rejected payload looks like a normal reply), so the only
@@ -190,7 +227,7 @@ export async function pushVoltraSession(
     const saved = after.sessions.some((s) => s.title === title);
     if (!saved) {
       console.error(
-        `voltra session "${title}" not found after ${existing ? "update" : "create"}. ` +
+        `voltra session "${title}" not found after ${action}. ` +
           `Reply: ${replyText}. List had ${after.sessions.length} session(s) ` +
           `[${after.sessions.slice(0, 5).map((s) => s.title).join(" | ")}], shape ${after.shape}`
       );
@@ -206,8 +243,9 @@ export async function pushVoltraSession(
     return {
       ok: true,
       title,
-      action: existing ? "updated" : "created",
+      action,
       exercises: items.length,
+      note,
       skipped,
       // Anything here means the brief omitted load_lb - fix the brief, not the device.
       guessedLoads,
