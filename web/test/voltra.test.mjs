@@ -46,7 +46,10 @@ const payload = V.sessionPayload("2026.09.28", [item, oneArm]);
 
 // The contract (Cortex session-schema-reference.md): everything filled in, nothing
 // left for the backend to store as null.
-eq("config objects are complete", Object.keys(item.actionModeConfig).length, 17);
+eq("config objects are complete", Object.keys(item.actionModeConfig).length, 20);
+// The CLI sends these explicitly as null (captured from `voltra session create/update`).
+eq("drop-set fields are explicit nulls", [item.actionModeConfig.dropSetHoldingTime, item.actionModeConfig.dropSetTargetReps, item.actionModeConfig.dropSetZeroPosition], [null, null, null]);
+eq("assistantSwitch is an explicit null", "assistantSwitch" in item.itemDetails[0].modeConfig && item.itemDetails[0].modeConfig.assistantSwitch === null, true);
 eq("handMode lives in actionModeConfig", [item.actionModeConfig.handMode, oneArm.actionModeConfig.handMode, "handMode" in item], [2, 1, false]);
 eq("disabled extras are null, never 0", [item.actionModeConfig.chainsValue, item.itemDetails[0].modeConfig.eccentricValue], [null, null]);
 eq("sessionConfig has its defaults", payload.sessionConfig, { autoUnloadHoldingTime: 3, targetRepUnload: false, zeroUnload: false, smartLoadValue: 3 });

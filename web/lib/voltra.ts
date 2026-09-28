@@ -130,7 +130,7 @@ export type SessionSet = {
   restTime: number;                  // seconds, multiple of 10
   tag: 0 | 1 | 2;                    // Normal | Warm-up | Drop Set
   // Bilateral items use direction 0; one-arm items alternate 1 (Left) and 2 (Right).
-  modeConfig: { baseValue: number; direction: 0 | 1 | 2 } & Nullable3;
+  modeConfig: { baseValue: number; direction: 0 | 1 | 2; assistantSwitch: null } & Nullable3;
 };
 
 export type ActionModeConfig = {
@@ -148,6 +148,10 @@ export type ActionModeConfig = {
   maxEccentricLoad: 0;
   eccentricInputType: 0;
   smartLoadValue: 0;
+  // Drop sets are off. The CLI sends these as explicit nulls; so do we.
+  dropSetHoldingTime: null;
+  dropSetTargetReps: null;
+  dropSetZeroPosition: null;
 } & Nullable3;
 
 export type SessionItem = {
@@ -230,13 +234,16 @@ export function sessionItem(o: {
       maxEccentricLoad: 0,
       eccentricInputType: 0,
       smartLoadValue: 0,
+      dropSetHoldingTime: null,
+      dropSetTargetReps: null,
+      dropSetZeroPosition: null,
     },
     itemDetails: Array.from({ length: sets }, (_, i) => ({
       position: i + 1,
       repCount,
       restTime,
       tag: 0,
-      modeConfig: { baseValue, direction: o.oneArm ? (((i % 2) + 1) as 1 | 2) : 0, ...DISABLED },
+      modeConfig: { baseValue, direction: o.oneArm ? (((i % 2) + 1) as 1 | 2) : 0, assistantSwitch: null, ...DISABLED },
     })),
   };
 }
@@ -258,9 +265,11 @@ export function sessionPayload(title: string, items: SessionItem[]): SessionPayl
 //   GET  /workout/me/sessions            the list: { code, msg, data: { workoutSessions } }
 //   POST /workout/me/custom-session/v2   create (documented in the Cortex schema reference)
 //   PUT  /workout/me/sessions/v2/{id}    update: title, sessionConfig, blockList,
-//                                        connectionMode only. The path is from the CLI
-//                                        binary, not the docs. The backend replaces the
+//                                        connectionMode only. The backend replaces the
 //                                        session, so its id changes.
+// Both write paths, and the body shape, were checked against what `voltra session
+// create/update` (CLI 0.2.25) actually sends, captured on a local listener via
+// VOLTRA_CLI_API_BASE_URL. The CLI's base URL omits "/agent" and adds it itself.
 // Paths this API doesn't know answer 204 with no body; a wrong method on a known
 // path answers 405.
 const SESSIONS = "/workout/me/sessions";
