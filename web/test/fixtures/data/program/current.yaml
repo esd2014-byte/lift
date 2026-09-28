@@ -1,0 +1,4 @@
+# SYNTHETIC program.
+days:
+  A: {name: Push}
+  B: {name: Pull}

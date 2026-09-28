@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logged } from "@/lib/log";
-import { readMany, tokenExpiry } from "@/lib/github";
+import { tokenExpiry } from "@/lib/github";
+import { readMany } from "@/lib/store";
 import { todayISO, ZONE } from "@/lib/date";
 import { requireAuth } from "@/lib/guard";
 import { verifySession, SESSION_COOKIE } from "@/lib/auth";
@@ -35,7 +36,9 @@ async function handleGET(req: NextRequest) {
         : /^\d+$/.test(session)
           ? await sessionDetail(Number(session))
           : { error: "session must be list or a number" };
-    return new NextResponse(JSON.stringify(body, null, 2), { headers: { "Content-Type": "application/json; charset=utf-8" } });
+    return new NextResponse(JSON.stringify(body, null, 2), {
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+    });
   }
 
   const checks = await run(req);
@@ -51,12 +54,18 @@ const localTime = (iso: string) =>
 async function run(req: NextRequest): Promise<Check[]> {
   const today = todayISO();
   const checks: Check[] = [];
-  const add = (group: string, label: string, status: Status, value: string) => checks.push({ group, label, status, value });
+  const add = (group: string, label: string, status: Status, value: string) =>
+    checks.push({ group, label, status, value });
 
   // ---- settings (set or not; never the value) ----
   const env = (name: string, required: boolean, shown?: string) => {
     const set = Boolean(process.env[name]?.trim());
-    add("Settings", name, set ? "ok" : required ? "fail" : "warn", set ? (shown ?? "set") : required ? "missing" : "not set");
+    add(
+      "Settings",
+      name,
+      set ? "ok" : required ? "fail" : "warn",
+      set ? (shown ?? "set") : required ? "missing" : "not set"
+    );
   };
   env("APP_SECRET", true);
   env("CRON_SECRET", true);
@@ -67,7 +76,12 @@ async function run(req: NextRequest): Promise<Check[]> {
   env("VOLTRA_API_KEY", true);
   add("Settings", "SESSION_VERSION", "ok", process.env.SESSION_VERSION?.trim() || "1 (default)");
   const signed = verifySession(req.cookies.get(SESSION_COOKIE)?.value);
-  add("Settings", "This device's sign-in", signed ? "ok" : "warn", signed ? "signed session" : "old cookie (upgrades on next page load)");
+  add(
+    "Settings",
+    "This device's sign-in",
+    signed ? "ok" : "warn",
+    signed ? "signed session" : "old cookie (upgrades on next page load)"
+  );
 
   // ---- data repo, in one request ----
   const yesterday = (() => {
@@ -91,14 +105,22 @@ async function run(req: NextRequest): Promise<Check[]> {
       briefToday ? "written" : files[`logs/briefs/${yesterday}.md`] ? "not yet (yesterday's is there)" : "missing"
     );
 
-    for (const [source, name] of [["hevy", "Hevy sync"], ["voltra", "Voltra sync"]] as const) {
+    for (const [source, name] of [
+      ["hevy", "Hevy sync"],
+      ["voltra", "Voltra sync"],
+    ] as const) {
       let at: string | undefined;
       try {
         at = (JSON.parse(files[`logs/${source}/recent.json`] ?? "{}") as { synced_at?: string }).synced_at;
       } catch {}
       const hours = at ? (Date.now() - Date.parse(at)) / 3_600_000 : null;
       const stale = hours !== null && hours > STALE_HOURS;
-      add("Syncs", name, hours === null ? "fail" : stale ? "warn" : "ok", at ? `${localTime(at)} ET${stale ? " (stale)" : ""}` : "never");
+      add(
+        "Syncs",
+        name,
+        hours === null ? "fail" : stale ? "warn" : "ok",
+        at ? `${localTime(at)} ET${stale ? " (stale)" : ""}` : "never"
+      );
     }
   } catch (err) {
     add("Data repo", "Access", "fail", publicMessage(err));
@@ -138,7 +160,12 @@ async function run(req: NextRequest): Promise<Check[]> {
     console.info("voltra probe", JSON.stringify(results));
     for (const r of results) {
       const found = r.sessions > 0;
-      add("Beyond+ probe", r.path, found ? "ok" : r.status === 200 ? "warn" : "fail", `HTTP ${r.status} · ${r.shape}${found ? ` · ${r.sessions} session(s)` : ""}`);
+      add(
+        "Beyond+ probe",
+        r.path,
+        found ? "ok" : r.status === 200 ? "warn" : "fail",
+        `HTTP ${r.status} · ${r.shape}${found ? ` · ${r.sessions} session(s)` : ""}`
+      );
     }
   }
 
@@ -149,7 +176,11 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 const ICON: Record<Status, string> = { ok: "✓", warn: "⚠", fail: "✗" };
 
 function page(checks: Check[]): string {
-  const worst: Status = checks.some((c) => c.status === "fail") ? "fail" : checks.some((c) => c.status === "warn") ? "warn" : "ok";
+  const worst: Status = checks.some((c) => c.status === "fail")
+    ? "fail"
+    : checks.some((c) => c.status === "warn")
+      ? "warn"
+      : "ok";
   const summary = { ok: "All good", warn: "Working, with warnings", fail: "Something's broken" }[worst];
   const groups = [...new Set(checks.map((c) => c.group))];
   const body = groups
@@ -157,7 +188,10 @@ function page(checks: Check[]): string {
       (g) =>
         `<h2>${esc(g)}</h2><ul>${checks
           .filter((c) => c.group === g)
-          .map((c) => `<li class="${c.status}"><span class="i">${ICON[c.status]}</span><span><b>${esc(c.label)}</b><br>${esc(c.value)}</span></li>`)
+          .map(
+            (c) =>
+              `<li class="${c.status}"><span class="i">${ICON[c.status]}</span><span><b>${esc(c.label)}</b><br>${esc(c.value)}</span></li>`
+          )
           .join("")}</ul>`
     )
     .join("");

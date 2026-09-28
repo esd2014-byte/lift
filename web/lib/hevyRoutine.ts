@@ -1,6 +1,6 @@
 import { publicMessage } from "./errors";
 import { parse } from "yaml";
-import { readFile, writeFile } from "./github";
+import { readFile, writeFile } from "./store";
 import { createRoutine, listRoutines, updateRoutine, type Routine, type RoutineExercise } from "./hevy";
 import { parseReps, libraryIds, lookupId } from "./voltraSession";
 import { dayTitle, hevyTitle, isVoltraRow, voltraTitle } from "./session";
@@ -42,7 +42,12 @@ export function hevyTitles(mappingRaw: string | null): Map<string, string> {
 export function cleanNote(text: string | undefined): string {
   return (text ?? "")
     .split(/\s+—\s+/)
-    .map((part) => part.replace(/\[[a-z0-9_]+\]/gi, "").replace(/\s{2,}/g, " ").trim())
+    .map((part) =>
+      part
+        .replace(/\[[a-z0-9_]+\]/gi, "")
+        .replace(/\s{2,}/g, " ")
+        .trim()
+    )
     .filter(Boolean)
     .join(" — ");
 }
@@ -103,9 +108,7 @@ export function buildExercises(input: BuildInput): { exercises: RoutineExercise[
     const { sets, reps } = parseReps(row.reps);
     const seconds = /(\d+)\s*(s|sec|secs|seconds)\b/i.exec(row.reps);
     const weightKg =
-      typeof row.load_lb === "number" && row.load_lb > 0
-        ? Math.round((row.load_lb / LB_PER_KG) * 10) / 10
-        : null;
+      typeof row.load_lb === "number" && row.load_lb > 0 ? Math.round((row.load_lb / LB_PER_KG) * 10) / 10 : null;
 
     exercises.push({
       exercise_template_id: templateId,
@@ -178,9 +181,7 @@ export async function pushHevyRoutine(
 
     // Keep the day's warm-up: the program routine leads with it, the brief doesn't list it.
     const source = routines.find((r) => r.title === day);
-    const warmup = (source?.exercises ?? [])
-      .filter((e) => /^\s*warm-?up/i.test(e.notes ?? ""))
-      .map(forWrite);
+    const warmup = (source?.exercises ?? []).filter((e) => /^\s*warm-?up/i.test(e.notes ?? "")).map(forWrite);
 
     const { exercises, skipped, voltra } = buildExercises({
       rows: variant.rows,

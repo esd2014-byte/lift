@@ -1,0 +1,15 @@
+{
+  "synced_at": "2030-01-05T20:00:00.000Z",
+  "local_date": "2030-01-05",
+  "workout_count": 2,
+  "last_session": "2030-01-03",
+  "unnamed_count": 0,
+  "sessions": [
+    {"date": "2030-01-03", "start": "2030-01-03T18:20:00", "id": 1002, "actions": ["Lat Pulldown"], "action_ids": [1],
+     "unnamed": false, "sets": 3, "reps": 36, "duration_sec": 150, "avg_force_lb": 90.2, "max_force_lb": 92.0,
+     "avg_power_w": 300, "max_power_w": 700, "avg_velocity_mm_s": 700, "volume_lb": 3247},
+    {"date": "2030-01-01", "start": "2030-01-01T18:30:00", "id": 1001, "actions": ["Tricep Extension Pushdown"], "action_ids": [102],
+     "unnamed": false, "sets": 3, "reps": 36, "duration_sec": 140, "avg_force_lb": 35.1, "max_force_lb": 36.0,
+     "avg_power_w": 100, "max_power_w": 250, "avg_velocity_mm_s": 690, "volume_lb": 1264}
+  ]
+}

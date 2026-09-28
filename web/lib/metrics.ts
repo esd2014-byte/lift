@@ -1,5 +1,3 @@
-import type { Workout } from "./hevy";
-
 /**
  * Streak and strength numbers, derived from the Hevy and Voltra digests in the repo.
  *
@@ -98,7 +96,12 @@ export function mergeSources(
   const fromHevy = hevy.map((s) => ({ ...s, source: "hevy" as const }));
   // A workout started in Lift is first-hand evidence of a training day, even before
   // (or without) either sync picking it up. It carries no sets, so no strength data.
-  const fromLift: DigestSession[] = liftDates.map((date) => ({ date, source: "lift", title: "Lift workout", exercises: [] }));
+  const fromLift: DigestSession[] = liftDates.map((date) => ({
+    date,
+    source: "lift",
+    title: "Lift workout",
+    exercises: [],
+  }));
   return [...fromHevy, ...asSessions, ...fromLift].sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
@@ -140,11 +143,7 @@ type DigestSession = {
   }>;
 };
 
-export function computeMetrics(
-  sessions: DigestSession[],
-  today: string,
-  restDays: string[] = []
-): Metrics {
+export function computeMetrics(sessions: DigestSession[], today: string, restDays: string[] = []): Metrics {
   const past = sessions.filter((s) => s.date <= today);
   const trained = new Set(past.map((s) => s.date));
   const rest = new Set(restDays);

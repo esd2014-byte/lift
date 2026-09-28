@@ -17,7 +17,9 @@ export default function WeekStrip({ m }: { m: Metrics }) {
   return (
     <div className="card weekcard">
       <div className="weekhead">
-        <p className="eyebrow" style={{ margin: 0 }}>This week</p>
+        <p className="eyebrow" style={{ margin: 0 }}>
+          This week
+        </p>
         <span className="meta">
           <span className="num">{m.sessionsThisWeek}</span> of {m.weeklyTarget}
           {m.restThisWeek > 0 && <> · {m.restThisWeek} rest</>}
@@ -38,8 +40,7 @@ export default function WeekStrip({ m }: { m: Metrics }) {
       <p className="sub">
         {m.lastSessionDate ? (
           <>
-            Last session{" "}
-            {new Date(`${m.lastSessionDate}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long" })}.{" "}
+            Last session {new Date(`${m.lastSessionDate}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long" })}.{" "}
             {gap !== null && gap > 0 && (
               <span className={`pill ${gap >= 3 ? "bad" : gap >= 2 ? "due" : "ok"}`}>
                 {gap} day{gap === 1 ? "" : "s"} off

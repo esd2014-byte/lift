@@ -33,7 +33,9 @@ async function call(path: string, init: RequestInit = {}) {
     signal: AbortSignal.timeout(TIMEOUT_MS),
   }).catch((err: unknown): never => {
     const timedOut = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
-    throw new Error(timedOut ? `Beyond+ didn't answer within ${TIMEOUT_MS / 1000}s (${path})` : `Couldn't reach Beyond+ (${path})`);
+    throw new Error(
+      timedOut ? `Beyond+ didn't answer within ${TIMEOUT_MS / 1000}s (${path})` : `Couldn't reach Beyond+ (${path})`
+    );
   });
   const text = await res.text();
   if (!res.ok) throw new Error(`Voltra ${path}: ${res.status} ${text.slice(0, 300)}`);
@@ -56,7 +58,9 @@ export function sessionsIn(d: unknown): Array<{ id: number; title: string }> {
     if (!v || typeof v !== "object" || seen.has(v) || depth > 3) return null;
     seen.add(v);
     if (Array.isArray(v)) {
-      return v.every((x) => x && typeof x === "object" && "title" in x) ? (v as Array<{ id: number; title: string }>) : null;
+      return v.every((x) => x && typeof x === "object" && "title" in x)
+        ? (v as Array<{ id: number; title: string }>)
+        : null;
     }
     const o = v as Record<string, unknown>;
     for (const k of ["workoutSessions", "sessions", "list", "records", "items", "data"]) {
@@ -73,7 +77,9 @@ export function shapeOf(d: unknown): string {
   if (!d || typeof d !== "object") return typeof d;
   if (Array.isArray(d)) return `array(${d.length})`;
   return `{${Object.entries(d as Record<string, unknown>)
-    .map(([k, v]) => (Array.isArray(v) ? `${k}:array(${v.length})` : v && typeof v === "object" ? `${k}:${shapeOf(v)}` : k))
+    .map(([k, v]) =>
+      Array.isArray(v) ? `${k}:array(${v.length})` : v && typeof v === "object" ? `${k}:${shapeOf(v)}` : k
+    )
     .join(", ")}}`;
 }
 
@@ -114,17 +120,17 @@ export async function listWorkouts(): Promise<VoltraWorkout[]> {
 type Nullable3 = { eccentricValue: null; chainsValue: null; inverseChainsValue: null };
 
 export type SessionSet = {
-  position: number;                  // 1..N within the item
-  repCount: number;                  // 1..99
-  restTime: number;                  // seconds, multiple of 10
-  tag: 0 | 1 | 2;                    // Normal | Warm-up | Drop Set
+  position: number; // 1..N within the item
+  repCount: number; // 1..99
+  restTime: number; // seconds, multiple of 10
+  tag: 0 | 1 | 2; // Normal | Warm-up | Drop Set
   // Bilateral items use direction 0; one-arm items alternate 1 (Left) and 2 (Right).
   modeConfig: { baseValue: number; direction: 0 | 1 | 2; assistantSwitch: null } & Nullable3;
 };
 
 export type ActionModeConfig = {
   baseValue: number;
-  handMode: 1 | 2;                   // 1 Unilateral | 2 Bilateral
+  handMode: 1 | 2; // 1 Unilateral | 2 Bilateral
   restTime: number;
   assistMode: 0;
   resistanceExperience: 0;
@@ -144,18 +150,18 @@ export type ActionModeConfig = {
 } & Nullable3;
 
 export type SessionItem = {
-  itemGroupPosition: number;         // 1..N within the block
-  workoutMode: 1;                    // Weight Training; the only mode this app writes
+  itemGroupPosition: number; // 1..N within the block
+  workoutMode: 1; // Weight Training; the only mode this app writes
   actionId: number;
   actionModeConfig: ActionModeConfig;
   itemDetails: SessionSet[];
 };
 
 export type SessionConfig = {
-  autoUnloadHoldingTime: number;     // seconds, 0..10
+  autoUnloadHoldingTime: number; // seconds, 0..10
   targetRepUnload: boolean;
   zeroUnload: boolean;
-  smartLoadValue: 1 | 2 | 3;         // Normal | Auto | Off
+  smartLoadValue: 1 | 2 | 3; // Normal | Auto | Off
 };
 
 /**
@@ -163,7 +169,7 @@ export type SessionConfig = {
  * one device (not Twin), made by an agent, not copied from another session.
  */
 export type SessionPayload = {
-  title: string;                     // 1..50 characters, unique per account
+  title: string; // 1..50 characters, unique per account
   accountRole: 0;
   connectionMode: 0;
   label: 0;
@@ -174,7 +180,12 @@ export type SessionPayload = {
 
 const DISABLED: Nullable3 = { eccentricValue: null, chainsValue: null, inverseChainsValue: null };
 
-export const SESSION_CONFIG: SessionConfig = { autoUnloadHoldingTime: 3, targetRepUnload: false, zeroUnload: false, smartLoadValue: 3 };
+export const SESSION_CONFIG: SessionConfig = {
+  autoUnloadHoldingTime: 3,
+  targetRepUnload: false,
+  zeroUnload: false,
+  smartLoadValue: 3,
+};
 
 /** Rest the contract accepts: whole tens of seconds, 0..290. */
 export function clampRest(sec: number) {
@@ -293,10 +304,12 @@ export async function updateSession(id: number, payload: SessionPayload) {
   const { title, sessionConfig, blockList, connectionMode } = payload;
   return writeResult(
     "session update",
-    await call(`${UPDATE}/${id}`, { method: "PUT", body: JSON.stringify({ title, sessionConfig, blockList, connectionMode }) })
+    await call(`${UPDATE}/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({ title, sessionConfig, blockList, connectionMode }),
+    })
   );
 }
-
 
 /**
  * Read-only: one session's full detail, raw, from each path that might serve it.
@@ -319,7 +332,9 @@ export async function sessionDetail(id: number): Promise<Record<string, unknown>
  * never values) and how many sessions it holds. For finding the right endpoint
  * from /api/diagnostics?probe=voltra.
  */
-export async function probe(path: string): Promise<{ path: string; status: number | string; shape: string; sessions: number }> {
+export async function probe(
+  path: string
+): Promise<{ path: string; status: number | string; shape: string; sessions: number }> {
   try {
     const res = await fetch(BASE + path, {
       headers: { Authorization: `Bearer ${key()}` },

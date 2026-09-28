@@ -2,7 +2,9 @@
 export default function Coaching({ html }: { html: string }) {
   return (
     <section>
-      <div className="head"><h2>Coaching</h2></div>
+      <div className="head">
+        <h2>Coaching</h2>
+      </div>
       {html.trim() ? (
         <div className="coach" dangerouslySetInnerHTML={{ __html: html }} />
       ) : (

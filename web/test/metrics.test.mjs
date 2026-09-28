@@ -23,14 +23,28 @@ const { localDateOf } = await import(`${out}/date.js`);
 const { rollingAverage } = await import(`${out}/bodyweight.js`);
 
 let failed = 0;
-const check = (label, ok) => { if (!ok) { console.log(`FAIL  ${label}`); failed++; } };
-const eq = (label, got, want) => check(`${label}: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`, JSON.stringify(got) === JSON.stringify(want));
+const check = (label, ok) => {
+  if (!ok) {
+    console.log(`FAIL  ${label}`);
+    failed++;
+  }
+};
+const eq = (label, got, want) =>
+  check(
+    `${label}: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`,
+    JSON.stringify(got) === JSON.stringify(want)
+  );
 
 const ex = (name, lb, reps) => ({ name, sets: 3, top: { lb, reps, rpe: null, seconds: null } });
 const hevy = (date, ...exercises) => ({ date, title: "Day", exercises });
 const voltra = (date, actions, max_force_lb = 100) => ({
-  date, actions, unnamed: actions.every((a) => /free exercise/i.test(a)),
-  sets: 3, reps: 30, avg_force_lb: null, max_force_lb,
+  date,
+  actions,
+  unnamed: actions.every((a) => /free exercise/i.test(a)),
+  sets: 3,
+  reps: 30,
+  avg_force_lb: null,
+  max_force_lb,
 });
 
 const TODAY = "2026-09-27"; // a Sunday
@@ -40,7 +54,11 @@ const TODAY = "2026-09-27"; // a Sunday
   // One evening logged in both apps, with Beyond+ sending one record per exercise.
   const merged = mergeSources(
     [hevy("2026-09-26", ex("Lateral Raise (Dumbbell)", 20, 12)), hevy("2026-09-21", ex("Cat / Cow", null, 8))],
-    [voltra("2026-09-26", ["Lat Pulldown"]), voltra("2026-09-26", ["Tricep Extension Pushdown"]), voltra("2026-09-26", ["Cable Crunch"])]
+    [
+      voltra("2026-09-26", ["Lat Pulldown"]),
+      voltra("2026-09-26", ["Tricep Extension Pushdown"]),
+      voltra("2026-09-26", ["Cable Crunch"]),
+    ]
   );
   const m = computeMetrics(merged, TODAY);
   eq("last7 counts days, not records", m.last7, 2);
@@ -53,7 +71,10 @@ const TODAY = "2026-09-27"; // a Sunday
   const merged = mergeSources([], [voltra("2026-09-24", ["Free Exercises"], 300)]);
   const m = computeMetrics(merged, TODAY);
   eq("unnamed day counts toward streak", m.last7, 1);
-  check("unnamed day feeds no anchor", m.anchors.every((a) => a.trend === "none"));
+  check(
+    "unnamed day feeds no anchor",
+    m.anchors.every((a) => a.trend === "none")
+  );
 }
 
 // ---- anchors: exact names, enforced source, no invented zeroes ------------
@@ -79,7 +100,10 @@ const TODAY = "2026-09-27"; // a Sunday
   eq("flat bench delta carries a unit", a.flat_press.delta, "+7 lb");
   eq("flat bench trend", a.flat_press.trend, "up");
   eq("no index until calibrated", m.strengthIndex, null);
-  check("index note names what's missing", m.indexNote.includes("Voltra Belt Squat") && m.indexNote.includes("Voltra Deadlift"));
+  check(
+    "index note names what's missing",
+    m.indexNote.includes("Voltra Belt Squat") && m.indexNote.includes("Voltra Deadlift")
+  );
 }
 {
   const merged = mergeSources(

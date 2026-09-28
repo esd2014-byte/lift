@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { logged } from "@/lib/log";
 import { publicMessage } from "@/lib/errors";
 import { requireAuth } from "@/lib/guard";
-import { updateFile } from "@/lib/github";
+import { updateFile } from "@/lib/store";
 import { todayISO } from "@/lib/date";
+import { upsertJsonDay } from "@/lib/dailyLog";
 
 export const dynamic = "force-dynamic";
 
@@ -27,18 +28,8 @@ async function handlePOST(req: NextRequest) {
     const today = todayISO();
     await updateFile(
       path,
-      (cur) => {
-        let log: Array<{ date: string; reason: string; logged_at: string }>;
-        try {
-          log = JSON.parse(cur ?? "[]");
-        } catch {
-          log = [];
-        }
-        log = log.filter((r) => r.date !== today); // one entry per day; re-submitting replaces
-        log.push({ date: today, reason: text, logged_at: new Date().toISOString() });
-        log.sort((a, b) => (a.date < b.date ? -1 : 1));
-        return JSON.stringify(log, null, 2) + "\n";
-      },
+      // One entry per day; re-submitting replaces.
+      (cur) => upsertJsonDay(cur, { date: today, reason: text, logged_at: new Date().toISOString() }),
       `Rest day ${today}: ${text.slice(0, 60)}`
     );
     return NextResponse.json({ ok: true, date: today });
