@@ -317,6 +317,11 @@ input[type="password"] {
 }
 button.btn,
 a.btn {
+  /* 44px: the smallest target a sweaty thumb hits reliably (WCAG 2.5.5, Apple HIG). */
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-family: Archivo, system-ui, sans-serif;
   font-size: 0.88rem;
   font-weight: 600;
@@ -339,7 +344,8 @@ a.btn.block {
 .linkish {
   background: none;
   border: 0;
-  padding: 0;
+  padding: 12px 0;
+  min-height: 44px;
   font: inherit;
   font-size: 0.82rem;
   color: var(--muted);
@@ -365,6 +371,14 @@ a.btn.block {
   color: var(--muted);
   margin-top: 8px;
   line-height: 1.5;
+}
+details.guide summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--accent);
+  font-weight: 600;
 }
 .guide b {
   color: var(--ink-2);
@@ -417,6 +431,7 @@ a.btn.block {
   gap: 7px;
 }
 .variant {
+  min-height: 56px;
   font-family: Archivo, system-ui, sans-serif;
   text-align: left;
   cursor: pointer;
@@ -646,10 +661,11 @@ textarea.reason {
 }
 .chip {
   font-family: Archivo, sans-serif;
-  font-size: 0.74rem;
+  font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  padding: 5px 10px;
+  min-height: 44px;
+  padding: 8px 14px;
   border-radius: 999px;
   background: var(--surface);
   border: 1px solid var(--border-strong);
@@ -707,18 +723,24 @@ textarea.reason {
   font-family: Archivo, sans-serif;
   font-weight: 600;
 }
+.chip[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
 .choices {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 6px;
 }
 .choice {
-  font-size: 0.83rem;
+  font-size: 0.88rem;
   font-weight: 500;
+  min-height: 44px;
   padding: 10px 4px;
   background: var(--bg);
-  color: var(--muted);
-  border: 1px solid var(--border);
+  color: var(--ink-2);
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
   font-family: Archivo, sans-serif;
   cursor: pointer;
@@ -729,6 +751,7 @@ textarea.reason {
   color: var(--accent-ink);
 }
 .savebar {
+  flex-direction: column;
   position: sticky;
   bottom: 0;
   margin: 16px -16px -16px;
@@ -745,9 +768,11 @@ textarea.reason {
 a {
   color: var(--accent);
 }
+/* A double ring - accent, then page colour - so focus shows on dark cards too. */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--bg);
   border-radius: 4px;
 }
 
@@ -838,6 +863,8 @@ h1.hype {
 }
 h1.hype button {
   all: unset;
+  display: inline-block;
+  min-height: 44px;
   cursor: pointer;
   font: inherit;
   color: inherit;
@@ -922,9 +949,16 @@ button.btn.danger {
   border-color: var(--bad);
   color: #fff;
 }
-button.btn:disabled {
-  opacity: 0.55;
-  cursor: default;
+/* One disabled look for every button: clearly faded, and says so on hover. */
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+/* A text link inside a sentence, with a 44px tap area that doesn't move the text. */
+a.tap {
+  display: inline-block;
+  padding: 12px 0;
+  margin: -12px 0;
 }
 .timer {
   display: flex;

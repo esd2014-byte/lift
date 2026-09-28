@@ -29,7 +29,14 @@ export type DayState = {
   voltraSessions: VoltraSession[];
   voltraSyncedAt: string | null;
   voltraUnnamed: number;
-  bodyweight: { logged: number | null; skipped: boolean; rolling7: number | null; days: number };
+  bodyweight: {
+    logged: number | null;
+    skipped: boolean;
+    rolling7: number | null;
+    days: number;
+    /** The most recent weight before today, for a hint that can't be mistaken for today's entry. */
+    last: { date: string; weight: number } | null;
+  };
   measurements: { lastDate: string | null; daysSince: number | null };
   photos: { lastDate: string | null; daysSince: number | null };
   restDays: string[];
@@ -110,6 +117,7 @@ export async function loadDay(): Promise<DayState> {
   let skipped = false;
   let rolling7: number | null = null;
   let days = 0;
+  let last: { date: string; weight: number } | null = null;
   if (bwCsv) {
     const rows = bwCsv.trimEnd().split("\n").slice(1).filter(Boolean);
     const mine = rows.find((r) => r.startsWith(`${today},`));
@@ -117,6 +125,13 @@ export async function loadDay(): Promise<DayState> {
       const v = mine.split(",")[1];
       if (v === "skip") skipped = true;
       else logged = Number(v);
+    }
+    for (const row of [...rows].reverse()) {
+      const [date, v] = row.split(",");
+      if (date < today && Number(v) > 0) {
+        last = { date, weight: Number(v) };
+        break;
+      }
     }
     const r = rollingAverage(rows, today);
     rolling7 = r.avg;
@@ -146,7 +161,7 @@ export async function loadDay(): Promise<DayState> {
     voltraSessions: voltra?.sessions ?? [],
     voltraSyncedAt: voltra?.synced_at ?? null,
     voltraUnnamed: voltra?.unnamed_count ?? 0,
-    bodyweight: { logged, skipped, rolling7, days },
+    bodyweight: { logged, skipped, rolling7, days, last },
     measurements: { lastDate: lastMeas, daysSince: lastMeas ? daysBetween(lastMeas, today) : null },
     photos: { lastDate: lastPhoto, daysSince: lastPhoto ? daysBetween(lastPhoto, today) : null },
     restDays: (restLog ?? []).map((r) => r.date),

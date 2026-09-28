@@ -146,7 +146,10 @@ export default async function Page() {
                 <Strength m={metrics} />
                 <Body state={state} />
                 <p className="sub" style={{ paddingBottom: 8 }}>
-                  <Link href="/rate">Rate exercises</Link>: tell the coach what to program more, or never.
+                  <Link className="tap" href="/rate">
+                    Rate exercises
+                  </Link>
+                  : tell the coach what to program more, or never.
                 </p>
               </>
             ),
