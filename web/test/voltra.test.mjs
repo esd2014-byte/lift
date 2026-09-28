@@ -45,7 +45,7 @@ const item = {
   itemDetails: [{ position: 1, repCount: 8, restTime: 90, tag: 0, modeConfig: { baseValue: 60, direction: 0 } }],
 };
 const payload = {
-  title: "Day A - Push (Sep 28)", sessionConfig: {}, blockList: [{ blockType: 1, itemList: [item] }],
+  title: "2026.09.28", sessionConfig: {}, blockList: [{ blockType: 1, itemList: [item] }],
   originSessionId: null, accountRole: 0, connectionMode: 0, label: 0,
 };
 await V.createSession(payload);

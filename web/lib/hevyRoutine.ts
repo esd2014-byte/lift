@@ -193,7 +193,7 @@ export async function pushHevyRoutine(
     const notes = [
       `${variant.label} · ${variant.duration} · written by Lift`,
       voltra
-        ? `${voltra} cable exercise${voltra === 1 ? " is" : "s are"} on the Voltra: Beyond+ session "${voltraTitle(day, brief.date)}". Full running order is in Lift.`
+        ? `${voltra} cable exercise${voltra === 1 ? " is" : "s are"} on the Voltra: Beyond+ session "${voltraTitle(brief.date)}". Full running order is in Lift.`
         : "",
     ]
       .filter(Boolean)

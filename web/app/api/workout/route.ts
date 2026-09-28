@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
       const [hevy, voltra] = await Promise.all([
         pushHevyRoutine(brief, variant, dayNames),
-        pushVoltraSession(brief, variant, dayNames),
+        pushVoltraSession(brief, variant),
       ]);
       return NextResponse.json({ ok: true, entry, hevy, voltra });
     }

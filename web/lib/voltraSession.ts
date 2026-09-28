@@ -2,7 +2,7 @@ import { publicMessage } from "./errors";
 import { parse } from "yaml";
 import { readFile } from "./github";
 import { createSession, updateSession, listSessions, clampLoad, type SessionPayload, type SessionItem } from "./voltra";
-import { dayTitle, shortDate, voltraTitle } from "./session";
+import { voltraTitle } from "./session";
 import type { BriefData, Row } from "./types";
 
 /**
@@ -10,14 +10,15 @@ import type { BriefData, Row } from "./types";
  *
  * The flow this serves: start the workout in Lift, and when the first cable
  * exercise comes up the session is already waiting on the device with the right
- * movements and loads, named after the program day. Nothing is programmed by hand.
+ * movements and loads, titled with the date ("2026.09.28"). Nothing is programmed
+ * by hand.
  *
  * Only exercises present in scripts/voltra_mapping.yaml are pushed. An unmapped
  * exercise is skipped and reported, never guessed at - the action name is what makes
  * the logged workout identifiable later, and a wrong name is worse than a gap.
  *
  * Idempotent per day: a session already created for this date is updated, not
- * duplicated, even if the chosen variant changed the day it trains.
+ * duplicated, even if the chosen variant changed.
  */
 
 type Mapping = {
@@ -125,8 +126,7 @@ export function sessionPayload(title: string, items: SessionItem[]): SessionPayl
 
 export async function pushVoltraSession(
   brief: BriefData,
-  variantKey: string,
-  dayNames: Record<string, string>
+  variantKey: string
 ): Promise<VoltraPushResult> {
   try {
     const [mapRaw, libRaw] = await Promise.all([
@@ -185,38 +185,30 @@ export async function pushVoltraSession(
 
     if (!items.length) return { ok: true, action: "none", exercises: 0, skipped };
 
-    const title = voltraTitle(dayTitle(brief, variant, dayNames), brief.date).slice(0, 50).trim();
+    const title = voltraTitle(brief.date);
     const payload = sessionPayload(title, items);
 
-    // Today's session, whatever it was called when first pushed: the day can change
-    // with the variant, and older sessions were titled by date alone. Beyond+ refuses
-    // a second session with the same title, so an existing one is updated instead.
-    const dateSuffix = `(${shortDate(brief.date)})`;
-    const legacy = brief.date.replace(/-/g, ".");
+    // One session per date. Beyond+ refuses a second session with the same title,
+    // so a session already there for today (another variant, a second Start) is
+    // updated instead.
     const before = await listSessions();
-    const existing = before.sessions.find(
-      (s) => s.title === title || s.title.endsWith(dateSuffix) || s.title === legacy
-    );
+    const existing = before.sessions.find((s) => s.title === title);
 
     let action: "created" | "updated" | "kept" = "created";
-    let note: string | undefined;
     let reply: unknown;
     if (existing) {
       try {
         reply = await updateSession(existing.id, payload);
         action = "updated";
       } catch (err) {
-        // Today's session is already on the device under the right name: use it
-        // as it is, and say the refresh didn't happen.
-        if (existing.title === title) {
-          console.warn(`voltra session update failed; keeping "${title}"`, err);
-          return { ok: true, title, action: "kept", exercises: items.length, skipped, guessedLoads, note: `couldn't update it (${publicMessage(err)})` };
-        }
-        // A differently named session for today (another variant): make today's anew.
-        note = `"${existing.title}" is still on the device`;
+        // Today's session is already on the device: use it as it is, and say the
+        // refresh didn't happen.
+        console.warn(`voltra session update failed; keeping "${title}"`, err);
+        return { ok: true, title, action: "kept", exercises: items.length, skipped, guessedLoads, note: `couldn't update it (${publicMessage(err)})` };
       }
+    } else {
+      reply = await createSession(payload);
     }
-    if (action === "created") reply = await createSession(payload);
     const replyText = JSON.stringify(reply ?? {}).slice(0, 300);
     console.info(`voltra session ${action} "${title}": ${replyText}`);
 
@@ -245,7 +237,6 @@ export async function pushVoltraSession(
       title,
       action,
       exercises: items.length,
-      note,
       skipped,
       // Anything here means the brief omitted load_lb - fix the brief, not the device.
       guessedLoads,
