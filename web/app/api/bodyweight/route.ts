@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFile, writeFile } from "@/lib/github";
+import { updateFile } from "@/lib/github";
 import { todayISO } from "@/lib/date";
 import { rollingAverage } from "@/lib/bodyweight";
 
@@ -22,19 +22,19 @@ export async function POST(req: NextRequest) {
     }
 
     const path = "logs/bodyweight.csv";
-    const existing = (await readFile(path)) ?? "date,weight_lb\n";
     const today = todayISO();
 
     // One row per day - re-submitting replaces rather than appends.
-    const rows = existing.trimEnd().split("\n");
-    const header = rows[0];
-    const kept = rows.slice(1).filter((r) => r && !r.startsWith(`${today},`));
-    kept.push(`${today},${skip ? "skip" : weight}`);
-    kept.sort();
-
-    await writeFile(
+    let kept: string[] = [];
+    await updateFile(
       path,
-      [header, ...kept].join("\n") + "\n",
+      (cur) => {
+        const rows = (cur ?? "date,weight_lb\n").trimEnd().split("\n");
+        kept = rows.slice(1).filter((r) => r && !r.startsWith(`${today},`));
+        kept.push(`${today},${skip ? "skip" : weight}`);
+        kept.sort();
+        return [rows[0], ...kept].join("\n") + "\n";
+      },
       skip ? `Bodyweight ${today}: skipped` : `Bodyweight ${today}: ${weight} lb`
     );
 

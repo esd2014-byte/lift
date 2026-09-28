@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { readFile, listDir } from "@/lib/github";
+import { readFile, listDir, tokenExpiry } from "@/lib/github";
 import { dataRepoSource } from "@/lib/config";
 import { todayISO } from "@/lib/date";
 
@@ -50,6 +50,7 @@ export async function GET() {
     }
   }
   out.syncs = syncs;
+  out.dataTokenExpires = tokenExpiry()?.toISOString() ?? "no expiry reported";
 
   try {
     const res = await fetch("https://api.hevyapp.com/v1/workouts/count", {

@@ -1,4 +1,4 @@
-import { listWorkouts as listHevy } from "./hevy";
+import { listWorkouts as listHevy, workoutCount } from "./hevy";
 import { listWorkouts as listVoltra } from "./voltra";
 import { writeFile } from "./github";
 import { localDateOf, todayISO } from "./date";
@@ -20,13 +20,13 @@ export type SyncResult = { source: "hevy" | "voltra"; ok: boolean; workouts?: nu
 
 export async function syncHevy(why: string): Promise<SyncResult> {
   try {
-    const workouts = await listHevy();
+    const [workouts, total] = await Promise.all([listHevy(40), workoutCount().catch(() => null)]);
     workouts.sort((a, b) => (a.start_time < b.start_time ? 1 : -1));
 
     // A readable digest, not the raw dump: the routine reads this with an LLM, so
     // compactness and legibility matter more than completeness. Full detail stays
     // in Hevy, which remains the system of record.
-    const sessions = workouts.slice(0, 40).map((w) => {
+    const sessions = workouts.map((w) => {
       const minutes = w.end_time
         ? Math.round((Date.parse(w.end_time) - Date.parse(w.start_time)) / 60000)
         : null;
@@ -66,16 +66,16 @@ export async function syncHevy(why: string): Promise<SyncResult> {
     const payload = {
       synced_at: new Date().toISOString(),
       local_date: todayISO(),
-      workout_count: workouts.length,
+      workout_count: total ?? workouts.length,
       last_session: sessions[0]?.date ?? null,
       sessions,
     };
     await writeFile(
       "logs/hevy/recent.json",
       JSON.stringify(payload, null, 2) + "\n",
-      `Hevy sync ${todayISO()} (${workouts.length} workouts, ${why})`
+      `Hevy sync ${todayISO()} (${payload.workout_count} workouts, ${why})`
     );
-    return { source: "hevy", ok: true, workouts: workouts.length };
+    return { source: "hevy", ok: true, workouts: payload.workout_count };
   } catch (err) {
     console.error("hevy sync failed", err);
     return { source: "hevy", ok: false, error: (err instanceof Error ? err.message : String(err)).slice(0, 300) };

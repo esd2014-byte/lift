@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFile, writeFile } from "@/lib/github";
+import { updateFile } from "@/lib/github";
 import { todayISO } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
@@ -20,12 +20,11 @@ export async function POST(req: NextRequest) {
     if (text.length > 2000) return NextResponse.json({ error: "note too long" }, { status: 400 });
 
     const path = "logs/injury-notes.md";
-    const existing = (await readFile(path)) ??
+    const header =
       "# Injury notes\n\nAppended from the app. The morning routine reads these and proposes\nchanges to `athlete/injuries.yaml` - it does not edit the standing rules directly.\n";
-
     const today = todayISO();
     const entry = `\n## ${today}\n\n${text}\n`;
-    await writeFile(path, existing.trimEnd() + "\n" + entry, `Injury note ${today}`);
+    await updateFile(path, (cur) => (cur ?? header).trimEnd() + "\n" + entry, `Injury note ${today}`);
 
     return NextResponse.json({ ok: true, date: today });
   } catch (err) {

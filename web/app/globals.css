@@ -155,13 +155,13 @@
     padding: 11px 12px; border-radius: 9px; border: 1px solid var(--border-strong);
     background: var(--surface-2); color: var(--ink);
   }
-  button.btn {
+  button.btn, a.btn {
     font-family: Archivo, system-ui, sans-serif; font-size: .88rem; font-weight: 600;
     padding: 11px 15px; border-radius: 9px; cursor: pointer;
     background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent);
   }
   button.btn.quiet { background: transparent; color: var(--muted); border-color: var(--border-strong); }
-  button.btn.block { width: 100%; }
+  button.btn.block, a.btn.block { width: 100%; }
   .linkish {
     background: none; border: 0; padding: 0; font: inherit; font-size: .82rem;
     color: var(--muted); text-decoration: underline; cursor: pointer;

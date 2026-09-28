@@ -1,4 +1,4 @@
-import { readFile, listDir } from "./github";
+import { readMany } from "./github";
 import { todayISO } from "./date";
 import { rollingAverage } from "./bodyweight";
 import { parseDayNames } from "./program";
@@ -40,8 +40,7 @@ function daysBetween(a: string, b: string) {
   return Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86400000);
 }
 
-async function readJson<T>(path: string): Promise<T | null> {
-  const raw = await readFile(path);
+function parseJson<T>(raw: string | null | undefined): T | null {
   if (!raw) return null;
   try {
     return JSON.parse(raw) as T;
@@ -50,34 +49,51 @@ async function readJson<T>(path: string): Promise<T | null> {
   }
 }
 
+/** How far back to look for a brief. Older than this and it's no use as today's plan. */
+const BRIEF_LOOKBACK_DAYS = 7;
+
+function daysBefore(iso: string, n: number) {
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
 export async function loadDay(): Promise<DayState> {
   const today = todayISO();
 
-  const [briefFiles, hevy, voltra, bwCsv, measCsv, photoFiles, restLog, programRaw, workoutsRaw] = await Promise.all([
-    listDir("logs/briefs"),
-    readJson<{ synced_at: string; sessions: DigestSession[] }>("logs/hevy/recent.json"),
-    readJson<{ synced_at: string; unnamed_count: number; sessions: VoltraSession[] }>("logs/voltra/recent.json"),
-    readFile("logs/bodyweight.csv"),
-    readFile("logs/measurements.csv"),
-    listDir("logs/photos"),
-    readJson<Array<{ date: string; reason: string }>>("logs/rest-days.json"),
-    readFile("program/current.yaml"),
-    readFile("logs/workouts.json"),
-  ]);
+  // Everything the page needs in ONE request. The brief is found by asking for the
+  // last week's files by name rather than listing logs/briefs, which grows by a
+  // file a day and would eventually pass the listing API's cap.
+  const briefDates = Array.from({ length: BRIEF_LOOKBACK_DAYS }, (_, i) => daysBefore(today, i));
+  const briefPaths = briefDates.flatMap((d) => [`logs/briefs/${d}.md`, `logs/briefs/${d}.json`]);
+  const { files, dirs } = await readMany(
+    [
+      ...briefPaths,
+      "logs/hevy/recent.json",
+      "logs/voltra/recent.json",
+      "logs/bodyweight.csv",
+      "logs/measurements.csv",
+      "logs/rest-days.json",
+      "program/current.yaml",
+      "logs/workouts.json",
+    ],
+    ["logs/photos"]
+  );
+
+  const hevy = parseJson<{ synced_at: string; sessions: DigestSession[] }>(files["logs/hevy/recent.json"]);
+  const voltra = parseJson<{ synced_at: string; unnamed_count: number; sessions: VoltraSession[] }>(files["logs/voltra/recent.json"]);
+  const bwCsv = files["logs/bodyweight.csv"];
+  const measCsv = files["logs/measurements.csv"];
+  const restLog = parseJson<Array<{ date: string; reason: string }>>(files["logs/rest-days.json"]);
+  const programRaw = files["program/current.yaml"];
+  const workoutsRaw = files["logs/workouts.json"];
+  const photoFiles = dirs["logs/photos"];
 
   const dayNames = parseDayNames(programRaw);
 
-  const mdFiles = briefFiles.filter((f) => f.endsWith(".md")).sort();
-  const briefDate = mdFiles.includes(`${today}.md`)
-    ? today
-    : (mdFiles.at(-1)?.replace(/\.md$/, "") ?? null);
-
-  const [briefMarkdown, briefData] = briefDate
-    ? await Promise.all([
-        readFile(`logs/briefs/${briefDate}.md`),
-        readJson<BriefData>(`logs/briefs/${briefDate}.json`),
-      ])
-    : [null, null];
+  const briefDate = briefDates.find((d) => files[`logs/briefs/${d}.md`]) ?? null;
+  const briefMarkdown = briefDate ? files[`logs/briefs/${briefDate}.md`] : null;
+  const briefData = briefDate ? parseJson<BriefData>(files[`logs/briefs/${briefDate}.json`]) : null;
 
   // Bodyweight: one row per day; a skipped day is recorded as "skip" so the app
   // can tell "not asked yet" from "asked and declined".

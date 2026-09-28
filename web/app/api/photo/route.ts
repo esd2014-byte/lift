@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeBinaryFile } from "@/lib/github";
 import { todayISO } from "@/lib/date";
+import { MAX_PHOTO_BYTES, base64Bytes } from "@/lib/limits";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -19,9 +20,8 @@ export async function POST(req: NextRequest) {
     if (!m) return NextResponse.json({ error: "expected a base64 jpeg/png/webp data URL" }, { status: 400 });
 
     const [, ext, b64] = m;
-    const bytes = Math.floor((b64.length * 3) / 4);
-    if (bytes > 4_000_000) {
-      return NextResponse.json({ error: "image too large after downscaling" }, { status: 413 });
+    if (base64Bytes(b64) > MAX_PHOTO_BYTES) {
+      return NextResponse.json({ error: `photo is over ${MAX_PHOTO_BYTES / 1_000_000} MB after shrinking` }, { status: 413 });
     }
 
     const today = todayISO();
