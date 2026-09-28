@@ -96,7 +96,6 @@ export default function Today({
   const day = dayTitle(data, v, dayNames);
   // The card shows the brief's own name for the day ("Push + Day F finisher") unless
   // the variant trains a different day; the apps get the program's routine name.
-  const hasLoads = (v?.rows ?? []).some((r) => typeof r.load_lb === "number");
   const calibrating = (v?.rows ?? []).filter((r) => r.calibration).length;
   const voltraRows = (v?.rows ?? []).filter(isVoltraRow).length;
   const hevyRows = (v?.rows ?? []).length - voltraRows;
@@ -471,48 +470,50 @@ export default function Today({
               <>Everything today is logged in Hevy.</>
             )}
           </p>
-          <div className="tablewrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Exercise</th>
-                  {hasLoads && <th>Load</th>}
-                  <th>Sets × reps</th>
-                  <th>RPE</th>
-                </tr>
-              </thead>
-              <tbody>
-                {v.rows.map((r, i) => (
-                  <tr key={i}>
-                    <td>
-                      {r.superset && <span className="ss">{r.superset}</span>} <span className="exname">{r.name}</span>
-                      <div className="station">
-                        <span className={`where ${isVoltraRow(r) ? "where-voltra" : "where-hevy"}`}>
-                          {isVoltraRow(r) ? "Voltra" : "Hevy"}
-                        </span>
-                        {r.station && <> · {r.station}</>}
-                      </div>
-                      {r.calibration && (
-                        <div className="calib">
-                          <b>Calibration:</b> {r.load_lb} lb is a guess ({r.calibration.basis}). Target{" "}
-                          {r.calibration.reps} at RPE {r.calibration.rpe}. After set 1, go up 5–10 lb if it felt easier
-                          than RPE {r.calibration.rpe}, down if harder.
-                        </div>
-                      )}
-                    </td>
-                    {hasLoads && (
-                      <td className="repcell">
-                        {typeof r.load_lb === "number" ? `${r.load_lb} lb` : "—"}
-                        {r.calibration && <div className="guess">guess</div>}
-                      </td>
+          {/* One card row per exercise: at 360px a four-column table squeezed the names
+              and notes into a strip. Numbers get their own line; notes run full width. */}
+          <ol className="exlist">
+            {v.rows.map((r, i) => {
+              const where = isVoltraRow(r) ? "Voltra" : "Hevy";
+              return (
+                <li key={i} className={`ex${r.superset ? " inset" : ""}`}>
+                  <div className="exhead">
+                    {r.superset && (
+                      <span className="ss" aria-label={`Superset ${r.superset}`}>
+                        {r.superset}
+                      </span>
                     )}
-                    <td className="repcell">{r.reps}</td>
-                    <td className="repcell">{r.rpe ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    <span className="exname">{r.name}</span>
+                  </div>
+                  <div className="station">
+                    <span className={`where ${where === "Voltra" ? "where-voltra" : "where-hevy"}`}>{where}</span>
+                    {r.station && <> · {r.station}</>}
+                  </div>
+                  <p className="exnums num">
+                    {typeof r.load_lb === "number" && (
+                      <>
+                        <b>{r.load_lb} lb</b>
+                        {r.calibration && <span className="guess">guess</span>}
+                        <span className="sep"> · </span>
+                      </>
+                    )}
+                    <b>{r.reps}</b>
+                    {r.rpe != null && r.rpe !== "" && (
+                      <>
+                        <span className="sep"> · </span>RPE <b>{r.rpe}</b>
+                      </>
+                    )}
+                  </p>
+                  {r.calibration && (
+                    <div className="calib">
+                      <b>Calibration:</b> {r.load_lb} lb is a guess ({r.calibration.basis}). After set 1, go up 5–10 lb
+                      if it felt easier than RPE {r.calibration.rpe}, down if harder.
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
         </div>
       )}
     </section>

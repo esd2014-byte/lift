@@ -111,13 +111,26 @@ export default async function Page() {
       <div className="head">
         <h2>Today&apos;s pumps</h2>
       </div>
-      <div className="card warn">
-        <div className="label">No structured session for {state.briefDate ?? "today"}</div>
-        <div className="note">
-          This brief predates structured data, so there&apos;s nothing to start here. The session is in the Coaching
-          tab.
+      {state.briefDate ? (
+        <div className="callout info">
+          <b>No session to start from this brief.</b>
+          <div style={{ marginTop: 6 }}>
+            Its workout list is missing or couldn&apos;t be read, so the Start button can&apos;t set anything up. The
+            coach&apos;s plan is in the Coaching tab.
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="callout info">
+          <b>No brief yet.</b>
+          <div style={{ marginTop: 6 }}>
+            The coach writes one every morning, around 6 to 7 AM. If it isn&apos;t here by 8,{" "}
+            <a className="tap" href="/api/diagnostics">
+              diagnostics
+            </a>{" "}
+            shows what&apos;s missing.
+          </div>
+        </div>
+      )}
     </section>
   );
 

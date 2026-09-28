@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+
+const noSubscribe = () => () => {};
 
 /**
  * Says whether what you're looking at is today's, and gives you a way to fix it
@@ -38,49 +40,47 @@ export default function Freshness({
     }
   }
 
+  // Say which zone the time is in when the phone is somewhere else (travel).
+  // Read in the browser only: the server's zone isn't the phone's, and a guess
+  // there would make the two renders disagree.
+  const away = useSyncExternalStore(
+    noSubscribe,
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone !== zone,
+    () => false
+  );
   const time = generatedAt
     ? new Date(generatedAt).toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
         timeZone: zone,
+        ...(away ? { timeZoneName: "short" as const } : {}),
       })
     : null;
 
-  if (!stale) {
-    return (
-      <div className="freshness fresh">
-        <span className="fdot" />
-        <span>{time ? `Written ${time} today` : "Today's brief"}</span>
-      </div>
-    );
-  }
-
   const label = briefDate
-    ? new Date(`${briefDate}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long" })
-    : "never";
+    ? new Date(`${briefDate}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" })
+    : null;
 
+  // A status line and a separate button: the line says how current things are, the
+  // button pulls today's workouts in. Syncing can't write the brief (that's the
+  // morning routine's job), so the button says what it does.
   return (
-    <button className="freshness stale" onClick={refresh} disabled={busy}>
-      <span className="fdot" />
-      <span>
-        {busy ? (
-          "Syncing Hevy and Voltra…"
-        ) : done ? (
-          "Synced"
-        ) : failed ? (
-          <>
-            Sync failed · <u>Try again</u>
-          </>
-        ) : briefDate ? (
-          <>
-            Today&apos;s plan isn&apos;t written yet · showing {label}&apos;s · <u>Sync workouts</u>
-          </>
-        ) : (
-          <>
-            No plan yet · <u>Sync workouts</u>
-          </>
-        )}
-      </span>
-    </button>
+    <div className="freshrow">
+      <p className={`freshness ${stale ? "stale" : "fresh"}`} role="status">
+        <span className="fdot" aria-hidden="true" />
+        <span>
+          {!stale
+            ? time
+              ? `Written ${time} today`
+              : "Today's brief"
+            : label
+              ? `Today's plan isn't written yet. Showing ${label}'s.`
+              : "No plan yet."}
+        </span>
+      </p>
+      <button className="btn quiet small" onClick={refresh} disabled={busy}>
+        {busy ? "Syncing…" : done ? "Synced ✓" : failed ? "Sync failed. Try again" : "Sync workouts"}
+      </button>
+    </div>
   );
 }

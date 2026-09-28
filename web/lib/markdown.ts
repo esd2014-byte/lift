@@ -103,8 +103,15 @@ export function renderMarkdown(md: string): string {
       flushPara();
       const items: string[] = [];
       while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) {
-        items.push(`<li>${inline(lines[i].replace(/^\s*[-*]\s+/, ""))}</li>`);
+        let text = lines[i].replace(/^\s*[-*]\s+/, "");
         i++;
+        // A wrapped bullet: the lines that follow, up to a blank line or the next
+        // block, belong to this item - not to a new paragraph under the list.
+        while (i < lines.length && lines[i].trim() && !/^\s*([-*]\s+|#|>|\|)/.test(lines[i])) {
+          text += " " + lines[i].trim();
+          i++;
+        }
+        items.push(`<li>${inline(text)}</li>`);
       }
       out.push(`<ul>${items.join("")}</ul>`);
       continue;
