@@ -1,5 +1,5 @@
 import { parse } from "yaml";
-import { readMany } from "./github";
+import { readMany } from "./store";
 import { hevyTitles } from "./hevyRoutine";
 import { libraryIds, lookupId } from "./voltraSession";
 import type { BriefData, Row } from "./types";
@@ -104,7 +104,12 @@ export function lastOnVoltra(sessions: VoltraSession[], actionId: number, name: 
     const ids = s.action_ids ?? [];
     if (s.unnamed || ids.length !== 1 || ids[0] !== actionId) continue;
     if (!s.avg_force_lb || !s.sets || !s.reps) continue;
-    return { lb: Math.round(s.avg_force_lb), reps: Math.max(1, Math.round(s.reps / s.sets)), date: s.date, title: `${name} on the Voltra` };
+    return {
+      lb: Math.round(s.avg_force_lb),
+      reps: Math.max(1, Math.round(s.reps / s.sets)),
+      date: s.date,
+      title: `${name} on the Voltra`,
+    };
   }
   return null;
 }
@@ -145,14 +150,19 @@ export function guessRow(row: Row, input: GuessInputs): Calibration | null {
         ...base,
         lb: floor5(carryOver(theirs.lb, theirs.reps, hi, rir) * rel.ratio),
         source: "related",
-        basis: `no history for this one; ${Math.round(rel.ratio * 100)}% of your ${theirs.title} (${theirs.lb} lb × ${theirs.reps} on ${theirs.date})`,
+        basis: `no history for this one; ${Math.round(rel.ratio * 100)}% of your ${theirs.title}: ${theirs.lb} lb × ${theirs.reps} on ${theirs.date}`,
       };
     }
   }
 
   const noted = /(\d+(?:\.\d+)?)\s*lb/i.exec(row.note ?? "");
   if (noted) {
-    return { ...base, lb: floor5(Number(noted[1])), source: "note", basis: "no history; the number in the coach's note" };
+    return {
+      ...base,
+      lb: floor5(Number(noted[1])),
+      source: "note",
+      basis: "no history; the number in the coach's note",
+    };
   }
   return { ...base, lb: LIGHT_START_LB, source: "none", basis: "no history for this or a related lift; a light start" };
 }
@@ -187,7 +197,7 @@ export function guessInputs(files: Record<string, string | null | undefined>): G
     estimate_from?: Record<string, { lift: string; ratio: number }>;
   };
   // No history reads as no history: every guess falls through to the later tiers.
-  const history = <T,>(path: string): T[] => {
+  const history = <T>(path: string): T[] => {
     try {
       return (JSON.parse(files[path] ?? "{}") as { sessions?: T[] }).sessions ?? [];
     } catch {

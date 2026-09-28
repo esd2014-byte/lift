@@ -8,7 +8,8 @@ export const revalidate = 0;
 
 export default async function RatePage() {
   await requirePageAuth();
-  let exercises, error: string | null = null;
+  let exercises,
+    error: string | null = null;
   try {
     ({ exercises } = await loadLibrary());
   } catch (err) {

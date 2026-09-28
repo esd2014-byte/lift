@@ -1,4 +1,4 @@
-import { readMany } from "./github";
+import { readMany } from "./store";
 import { todayISO } from "./date";
 import { rollingAverage } from "./bodyweight";
 import { parseDayNames } from "./program";
@@ -84,7 +84,9 @@ export async function loadDay(): Promise<DayState> {
   );
 
   const hevy = parseJson<{ synced_at: string; sessions: DigestSession[] }>(files["logs/hevy/recent.json"]);
-  const voltra = parseJson<{ synced_at: string; unnamed_count: number; sessions: VoltraSession[] }>(files["logs/voltra/recent.json"]);
+  const voltra = parseJson<{ synced_at: string; unnamed_count: number; sessions: VoltraSession[] }>(
+    files["logs/voltra/recent.json"]
+  );
   const bwCsv = files["logs/bodyweight.csv"];
   const measCsv = files["logs/measurements.csv"];
   const restLog = parseJson<Array<{ date: string; reason: string }>>(files["logs/rest-days.json"]);
@@ -125,7 +127,11 @@ export async function loadDay(): Promise<DayState> {
     ? (measCsv.trimEnd().split("\n").slice(1).filter(Boolean).at(-1)?.split(",")[0] ?? null)
     : null;
   const lastPhoto = photoFiles.length
-    ? (photoFiles.map((f) => f.slice(0, 10)).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().at(-1) ?? null)
+    ? (photoFiles
+        .map((f) => f.slice(0, 10))
+        .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+        .sort()
+        .at(-1) ?? null)
     : null;
 
   return {

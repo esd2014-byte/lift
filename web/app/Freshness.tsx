@@ -63,7 +63,23 @@ export default function Freshness({
     <button className="freshness stale" onClick={refresh} disabled={busy}>
       <span className="fdot" />
       <span>
-        {busy ? "Syncing Hevy and Voltra…" : done ? "Synced" : failed ? <>Sync failed · <u>Try again</u></> : briefDate ? <>Today&apos;s plan isn&apos;t written yet · showing {label}&apos;s · <u>Sync workouts</u></> : <>No plan yet · <u>Sync workouts</u></>}
+        {busy ? (
+          "Syncing Hevy and Voltra…"
+        ) : done ? (
+          "Synced"
+        ) : failed ? (
+          <>
+            Sync failed · <u>Try again</u>
+          </>
+        ) : briefDate ? (
+          <>
+            Today&apos;s plan isn&apos;t written yet · showing {label}&apos;s · <u>Sync workouts</u>
+          </>
+        ) : (
+          <>
+            No plan yet · <u>Sync workouts</u>
+          </>
+        )}
       </span>
     </button>
   );

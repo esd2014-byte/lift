@@ -1,0 +1,3 @@
+# Formatting-only commits: `git blame` skips them (GitHub does too).
+# Prettier adoption
+d07a36aa837a6e6cfbf07a6fce6b8d43d1c81b37

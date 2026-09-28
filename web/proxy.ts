@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { LEGACY_COOKIE, isAuthed, issueSession, legacyValid, sameOrigin, sessionCookie, SESSION_COOKIE, verifySession } from "@/lib/auth";
+import {
+  LEGACY_COOKIE,
+  isAuthed,
+  issueSession,
+  legacyValid,
+  sameOrigin,
+  sessionCookie,
+  SESSION_COOKIE,
+  verifySession,
+} from "@/lib/auth";
 
 /**
  * The front door. Single user, so no accounts: a signed session cookie, set by

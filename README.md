@@ -9,6 +9,14 @@ noticed until training had stopped completely. So the system is built around two
 things: catching that drift early, and making real progress visible enough to keep
 going.
 
+<p>
+  <img src="docs/screenshots/today.jpg" width="260" alt="Today: this week's training days and the day's session">
+  <img src="docs/screenshots/session.jpg" width="260" alt="The session, with Voltra loads guessed from history and marked as calibration">
+  <img src="docs/screenshots/progress.jpg" width="260" alt="Strength index across four anchor lifts">
+</p>
+
+<sub>Screenshots from the demo (<code>npm run demo</code>), which runs on made-up data.</sub>
+
 ## How it works
 
 ```mermaid
@@ -38,9 +46,11 @@ flowchart LR
    injury constraints and the digests, and writes the day's brief: which session,
    why, at what loads. The brief has a prose part and a JSON part that follows
    [a documented schema](docs/brief-schema.md).
-3. **At the gym.** The app shows the session, lets you swap variants (full,
-   minimum, traveling, can't train), and hands off to the logger.
-4. **Always.** The Streak card counts distinct training days against a weekly
+3. **At the gym.** The app shows the session and lets you swap variants (full,
+   minimum, traveling, can't train). **Start** writes today's routine into Hevy and
+   today's session onto the Voltra, with the weights, so both are waiting. **End**
+   pulls the finished work back in.
+4. **Always.** The week strip counts distinct training days against a weekly
    target, and a Strength Index tracks estimated 1RM across four anchor lifts.
 
 ## Design decisions
@@ -59,48 +69,59 @@ flowchart LR
   on every read, so they can't drift from what actually happened.
 - **$0 a month.** Vercel Hobby, GitHub Actions and the device's free companion app.
 
-## Security model
+The reasoning behind each is written up as a short
+[architecture decision record](docs/adr/README.md).
 
-Single user, so no accounts. The secret is typed into `/login` once per device and
-exchanged for a signed, year-long session cookie. The cookie is an HMAC-signed session,
-not the secret, and bumping `SESSION_VERSION` signs every device out. The gate fails
-closed if the secret is unset.
+## Security
 
-- **Every route checks the session itself.** The `proxy.ts` gate isn't the only check,
-  so a matcher mistake fails closed.
-- **Two public routes:** `/api/health` (returns `{ ok: true }` and nothing else) and the
-  cron routes (which check their own bearer secret, in constant time).
-- **Cross-site requests that change state are refused** (`Sec-Fetch-Site` / `Origin`).
-- **A per-request nonce Content Security Policy** means only scripts the app rendered
-  can run.
-- **The model-written brief is checked twice.** Its JSON is shape-checked and bounded
-  before anything renders or pushes it. Its Markdown goes through a small renderer that
-  escapes everything and allows only `https:` links, with regression tests for injection.
-- **Errors never echo third-party responses to the browser.** Details stay in the logs.
+Single user: one secret, exchanged for a signed session cookie; every route checks it;
+a per-request-nonce CSP; the model-written brief is treated as untrusted input. The full
+model, and how to report a problem, is in [SECURITY.md](SECURITY.md).
 
 ## Running it
+
+**Try it with no credentials.** The demo runs the whole app on made-up data, read-only:
+
+```bash
+cd web
+npm ci
+npm run demo                 # http://localhost:3100, password: demo
+```
+
+**Against your own data repo:**
 
 ```bash
 cd web
 cp .env.example .env.local   # fill in: see the comments for each variable
-npm ci
-npm test                     # unit tests on synthetic fixtures, no credentials needed
 npm run dev
 ```
 
-The app needs a data repo to read from (`DATA_REPO`, `DATA_TOKEN`). Its layout is:
-`program/`, `library/exercises.yaml`, `athlete/`, `logs/briefs/`, `logs/hevy/`,
-`logs/voltra/`, `logs/bodyweight.csv`.
+The app reads a data repo (`DATA_REPO`, `DATA_TOKEN`) laid out like
+[`web/test/fixtures/data`](web/test/fixtures/data): `program/`, `library/`, `scripts/`
+mappings, and `logs/`. Point `DATA_DIR` at a local folder instead to skip GitHub entirely.
+
+**Checks** (the same ones CI runs):
+
+```bash
+npm run check                # typecheck, lint, format check, all tests
+```
+
+The tests use synthetic data only. The route tests run the real API handlers against a
+temporary copy of the fixture data repo, with no network.
 
 ## Layout
 
 ```
-web/                 Next.js app (App Router), API routes, crons
-  lib/metrics.ts     streak and strength-index computation
-  lib/markdown.ts    brief renderer (the trust boundary for model output)
-  test/              unit tests on synthetic fixtures
-scripts/             Python: program validation, Hevy routine sync
-docs/                brief schema, architecture review
+web/                    Next.js app (App Router), API routes, crons
+  lib/store.ts          the one door to the data: GitHub, or a local folder
+  lib/metrics.ts        streak and strength-index computation
+  lib/loadGuess.ts      calibration loads when the brief leaves one out
+  lib/markdown.ts       brief renderer (the trust boundary for model output)
+  test/                 unit and route tests; fixtures/data is a synthetic data repo
+  scripts/demo-data.mjs builds the demo's made-up data
+scripts/                Python: rebuilds the program's routines in Hevy (run by hand)
+docs/adr/               architecture decision records
+docs/                   brief schema, architecture review, screenshots
 ```
 
 ## License

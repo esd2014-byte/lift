@@ -49,8 +49,8 @@ export default function RateList({ exercises }: { exercises: Exercise[] }) {
   return (
     <>
       <p className="sub">
-        {unrated} of {exercises.length} still unrated. This is what makes exercise
-        selection yours rather than generic — rate them as you train.
+        {unrated} of {exercises.length} still unrated. This is what makes exercise selection yours rather than generic —
+        rate them as you train.
       </p>
 
       <div className="row" style={{ marginBottom: 14 }}>

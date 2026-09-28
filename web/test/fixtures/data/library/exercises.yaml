@@ -1,0 +1,23 @@
+# SYNTHETIC. Same shapes as library/exercises.yaml in the data repo.
+meta:
+  updated: 2030-01-01
+
+anchors:
+  - {id: db_bench, name: DB Bench Press, station: dumbbells, pattern: horizontal_push,
+     muscles: {primary: [chest]}, progression: load, tolerance: loved, anchor: true}
+
+push:
+  - {id: cable_press, name: Cable Single-Arm Press, station: cable, pattern: horizontal_push,
+     muscles: {primary: [chest]}, progression: load, tolerance: untested}
+  - {id: cable_pushdown, name: Cable Pushdown, station: cable, pattern: elbow_extension,
+     muscles: {primary: [triceps]}, progression: load, tolerance: fine}
+
+pull:
+  - {id: cable_pulldown, name: Cable Lat Pulldown, station: cable, pattern: vertical_pull,
+     muscles: {primary: [lats]}, progression: load, tolerance: loved}
+  - {id: db_row, name: DB Row, station: dumbbells, pattern: horizontal_pull,
+     muscles: {primary: [lats]}, progression: load, tolerance: fine}
+
+core_prehab:
+  - {id: dead_bug, name: Dead Bug, station: floor, pattern: anti_extension,
+     muscles: {primary: [abs]}, progression: reps, tolerance: untested}

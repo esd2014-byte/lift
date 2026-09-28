@@ -41,7 +41,9 @@ export class GitHubError extends Error {
 let headerExpiry: { value: string; at: number } | null = null;
 
 function parseExpiry(value: string): Date | null {
-  const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00Z` : value.replace(" UTC", "Z").replace(" ", "T"));
+  const d = new Date(
+    /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00Z` : value.replace(" UTC", "Z").replace(" ", "T")
+  );
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
@@ -83,7 +85,11 @@ async function gh(url: string, init: RequestInit = {}): Promise<Response> {
     });
   } catch (err) {
     const timedOut = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
-    throw new GitHubError("down", 0, timedOut ? `GitHub didn't answer within ${TIMEOUT_MS / 1000}s` : "Couldn't reach GitHub");
+    throw new GitHubError(
+      "down",
+      0,
+      timedOut ? `GitHub didn't answer within ${TIMEOUT_MS / 1000}s` : "Couldn't reach GitHub"
+    );
   }
   const exp = res.headers.get("github-authentication-token-expiration");
   if (exp) headerExpiry = { value: exp, at: Date.now() };
@@ -94,15 +100,27 @@ async function gh(url: string, init: RequestInit = {}): Promise<Response> {
 async function failure(res: Response, what: string): Promise<GitHubError> {
   const body = (await res.text().catch(() => "")).slice(0, 200);
   if (res.status === 401) {
-    return new GitHubError("auth", 401, "GitHub rejected the data key (DATA_TOKEN): it's expired, revoked, or mistyped.");
+    return new GitHubError(
+      "auth",
+      401,
+      "GitHub rejected the data key (DATA_TOKEN): it's expired, revoked, or mistyped."
+    );
   }
   if ((res.status === 403 || res.status === 429) && res.headers.get("x-ratelimit-remaining") === "0") {
     const reset = Number(res.headers.get("x-ratelimit-reset")) * 1000;
     const mins = reset ? Math.max(1, Math.ceil((reset - Date.now()) / 60000)) : null;
-    return new GitHubError("rate", res.status, `GitHub's rate limit is used up${mins ? `; it resets in about ${mins} min` : ""}.`);
+    return new GitHubError(
+      "rate",
+      res.status,
+      `GitHub's rate limit is used up${mins ? `; it resets in about ${mins} min` : ""}.`
+    );
   }
   if (res.status === 403 || res.status === 404) {
-    return new GitHubError("auth", res.status, `The data key can't ${what}. Check it has Contents access to DATA_REPO.`);
+    return new GitHubError(
+      "auth",
+      res.status,
+      `The data key can't ${what}. Check it has Contents access to DATA_REPO.`
+    );
   }
   if (res.status === 409 || res.status === 422) return new GitHubError("conflict", res.status, `${what}: ${body}`);
   if (res.status >= 500) return new GitHubError("down", res.status, `GitHub is having trouble (${res.status}).`);
@@ -166,8 +184,14 @@ async function readManyGraphQL(
 ): Promise<{ files: Record<string, string | null>; dirs: Record<string, string[]> }> {
   const { owner, repo, branch } = dataRepo();
   const fields = [
-    ...paths.map((p, i) => `f${i}: object(expression: ${JSON.stringify(`${branch}:${p}`)}) { ... on Blob { text isTruncated isBinary } }`),
-    ...dirs.map((d, i) => `d${i}: object(expression: ${JSON.stringify(`${branch}:${d}`)}) { ... on Tree { entries { name type } } }`),
+    ...paths.map(
+      (p, i) =>
+        `f${i}: object(expression: ${JSON.stringify(`${branch}:${p}`)}) { ... on Blob { text isTruncated isBinary } }`
+    ),
+    ...dirs.map(
+      (d, i) =>
+        `d${i}: object(expression: ${JSON.stringify(`${branch}:${d}`)}) { ... on Tree { entries { name type } } }`
+    ),
   ];
   const query = `query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { ${fields.join("\n")} } }`;
 
@@ -178,13 +202,27 @@ async function readManyGraphQL(
   });
   if (!res.ok) throw await failure(res, "read the data repo");
   const json = (await res.json()) as {
-    data?: { repository: Record<string, { text?: string | null; isTruncated?: boolean; isBinary?: boolean; entries?: Array<{ name: string; type: string }> } | null> | null };
+    data?: {
+      repository: Record<
+        string,
+        {
+          text?: string | null;
+          isTruncated?: boolean;
+          isBinary?: boolean;
+          entries?: Array<{ name: string; type: string }>;
+        } | null
+      > | null;
+    };
     errors?: Array<{ message: string; type?: string }>;
   };
   const repoData = json.data?.repository;
   if (!repoData) {
     const msg = json.errors?.[0]?.message ?? "no data";
-    throw new GitHubError(/not.*(found|resolve)|access/i.test(msg) ? "auth" : "other", 200, `The data key can't read DATA_REPO: ${msg}`);
+    throw new GitHubError(
+      /not.*(found|resolve)|access/i.test(msg) ? "auth" : "other",
+      200,
+      `The data key can't read DATA_REPO: ${msg}`
+    );
   }
 
   const files: Record<string, string | null> = {};
@@ -244,11 +282,19 @@ export async function updateFile(
     const put = await gh(contentsUrl(path), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, content: Buffer.from(next, "utf8").toString("base64"), sha, branch: dataRepo().branch }),
+      body: JSON.stringify({
+        message,
+        content: Buffer.from(next, "utf8").toString("base64"),
+        sha,
+        branch: dataRepo().branch,
+      }),
     });
     if (put.ok) {
       // Which data commit this write made: the durable link from a log line to the repo.
-      const sha = ((await put.json().catch(() => null)) as { commit?: { sha?: string } } | null)?.commit?.sha?.slice(0, 7);
+      const sha = ((await put.json().catch(() => null)) as { commit?: { sha?: string } } | null)?.commit?.sha?.slice(
+        0,
+        7
+      );
       log("data.write", { path, sha, attempt });
       return { changed: true, sha };
     }

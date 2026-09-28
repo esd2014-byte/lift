@@ -35,7 +35,18 @@ export function logged<C = unknown>(route: string, handler: Handler<C>): Handler
       }
       return res;
     } catch (err) {
-      log("route", { route, method: req.method, status: 500, ms: Date.now() - t0, id, error: err instanceof Error ? err.name : "error" }, "error");
+      log(
+        "route",
+        {
+          route,
+          method: req.method,
+          status: 500,
+          ms: Date.now() - t0,
+          id,
+          error: err instanceof Error ? err.name : "error",
+        },
+        "error"
+      );
       throw err;
     }
   };

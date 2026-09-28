@@ -1,7 +1,7 @@
 import { publicMessage } from "./errors";
 import { listWorkouts as listHevy, workoutCount } from "./hevy";
 import { listWorkouts as listVoltra } from "./voltra";
-import { writeFile } from "./github";
+import { writeFile } from "./store";
 import { localDateOf, todayISO } from "./date";
 
 /**
@@ -28,9 +28,7 @@ export async function syncHevy(why: string): Promise<SyncResult> {
     // compactness and legibility matter more than completeness. Full detail stays
     // in Hevy, which remains the system of record.
     const sessions = workouts.map((w) => {
-      const minutes = w.end_time
-        ? Math.round((Date.parse(w.end_time) - Date.parse(w.start_time)) / 60000)
-        : null;
+      const minutes = w.end_time ? Math.round((Date.parse(w.end_time) - Date.parse(w.start_time)) / 60000) : null;
       return {
         date: localDateOf(w.start_time),
         start: w.start_time,

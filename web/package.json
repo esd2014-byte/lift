@@ -3,9 +3,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "demo": "node scripts/demo-data.mjs && DATA_DIR=.demo-data DATA_READONLY=1 APP_SECRET=demo next dev -p 3100",
     "build": "next build",
     "start": "next start",
-    "test": "node test/markdown.test.mjs && node test/library.test.mjs && node test/metrics.test.mjs && node test/workout.test.mjs && node test/github.test.mjs && node test/security.test.mjs && node test/voltra.test.mjs && node test/loadGuess.test.mjs"
+    "typecheck": "tsc --noEmit -p .",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node test/markdown.test.mjs && node test/library.test.mjs && node test/metrics.test.mjs && node test/workout.test.mjs && node test/github.test.mjs && node test/security.test.mjs && node test/voltra.test.mjs && node test/loadGuess.test.mjs && tsx --test test/routes.test.ts",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm test"
   },
   "dependencies": {
     "next": "^16.3.5",
@@ -16,6 +22,10 @@
   "devDependencies": {
     "@types/node": "22.10.2",
     "@types/react": "19.0.2",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.6",
+    "prettier": "3.9.9",
+    "tsx": "4.23.15",
     "typescript": "5.7.2"
   }
 }

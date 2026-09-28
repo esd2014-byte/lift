@@ -1,7 +1,15 @@
 import { publicMessage } from "./errors";
 import { parse } from "yaml";
-import { readFile } from "./github";
-import { createSession, updateSession, listSessions, clampLoad, sessionItem, sessionPayload, type SessionItem } from "./voltra";
+import { readFile } from "./store";
+import {
+  createSession,
+  updateSession,
+  listSessions,
+  clampLoad,
+  sessionItem,
+  sessionPayload,
+  type SessionItem,
+} from "./voltra";
 import { voltraTitle } from "./session";
 import type { BriefData, Row } from "./types";
 
@@ -109,10 +117,7 @@ export type VoltraPushResult = {
   error?: string;
 };
 
-export async function pushVoltraSession(
-  brief: BriefData,
-  variantKey: string
-): Promise<VoltraPushResult> {
+export async function pushVoltraSession(brief: BriefData, variantKey: string): Promise<VoltraPushResult> {
   try {
     const [mapRaw, libRaw] = await Promise.all([
       readFile("scripts/voltra_mapping.yaml"),
@@ -200,7 +205,10 @@ export async function pushVoltraSession(
       console.error(
         `voltra session "${title}" not found after ${action}. ` +
           `Reply: ${replyText}. List had ${after.sessions.length} session(s) ` +
-          `[${after.sessions.slice(0, 5).map((s) => s.title).join(" | ")}], shape ${after.shape}`
+          `[${after.sessions
+            .slice(0, 5)
+            .map((s) => s.title)
+            .join(" | ")}], shape ${after.shape}`
       );
       return {
         ok: false,

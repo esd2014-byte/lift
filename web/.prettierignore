@@ -1,0 +1,7 @@
+.next
+.test-build
+node_modules
+package-lock.json
+test/fixtures
+next-env.d.ts
+.demo-data

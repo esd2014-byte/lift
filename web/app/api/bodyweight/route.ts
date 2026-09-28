@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { logged } from "@/lib/log";
 import { publicMessage } from "@/lib/errors";
 import { requireAuth } from "@/lib/guard";
-import { updateFile } from "@/lib/github";
+import { updateFile } from "@/lib/store";
 import { todayISO } from "@/lib/date";
 import { rollingAverage } from "@/lib/bodyweight";
+import { upsertCsvDay } from "@/lib/dailyLog";
 
 export const dynamic = "force-dynamic";
 
@@ -34,11 +35,9 @@ async function handlePOST(req: NextRequest) {
     await updateFile(
       path,
       (cur) => {
-        const rows = (cur ?? "date,weight_lb\n").trimEnd().split("\n");
-        kept = rows.slice(1).filter((r) => r && !r.startsWith(`${today},`));
-        kept.push(`${today},${skip ? "skip" : weight}`);
-        kept.sort();
-        return [rows[0], ...kept].join("\n") + "\n";
+        const next = upsertCsvDay(cur, "date,weight_lb", today, skip ? "skip" : String(weight));
+        kept = next.rows;
+        return next.text;
       },
       skip ? `Bodyweight ${today}: skipped` : `Bodyweight ${today}: ${weight} lb`
     );
