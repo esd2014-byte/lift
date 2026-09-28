@@ -54,6 +54,35 @@ function resolveLoad(row: Row): { lb: number; guessed: boolean } {
   return { lb: PLACEHOLDER_LB, guessed: true };
 }
 
+const ABBREVIATIONS: Record<string, string> = {
+  ohp: "overhead press",
+  db: "dumbbell",
+  dbs: "dumbbell",
+  rdl: "romanian deadlift",
+  ext: "extension",
+  kb: "kettlebell",
+};
+
+/**
+ * A name reduced to what identifies the movement. The brief writes "NUOBELL Seated
+ * OHP" where the library says "NUOBELL Seated Overhead Press"; both become
+ * "nuobell seated overhead press".
+ */
+export function normalizeName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(" ")
+    .map((w) => ABBREVIATIONS[w] ?? w)
+    .join(" ");
+}
+
+/** Library id for a brief row's name: exact first, then abbreviation-insensitive. */
+export function lookupId(ids: Map<string, string>, name: string): string | undefined {
+  return ids.get(name.toLowerCase()) ?? ids.get(normalizeName(name));
+}
+
 /** Library display name -> library id, across every section of exercises.yaml. */
 export function libraryIds(libRaw: string | null): Map<string, string> {
   const lib = parse(libRaw ?? "") as Record<string, unknown>;
@@ -61,7 +90,9 @@ export function libraryIds(libRaw: string | null): Map<string, string> {
   for (const items of Object.values(lib ?? {})) {
     if (!Array.isArray(items)) continue;
     for (const ex of items as Array<Record<string, string>>) {
-      if (ex?.id && ex?.name) byName.set(ex.name.toLowerCase(), ex.id);
+      if (!ex?.id || !ex?.name) continue;
+      byName.set(ex.name.toLowerCase(), ex.id);
+      byName.set(normalizeName(ex.name), ex.id);
     }
   }
   return byName;
@@ -98,7 +129,7 @@ export async function pushVoltraSession(
     let position = 1;
 
     for (const row of variant?.rows ?? []) {
-      const exId = byName.get(row.name.toLowerCase());
+      const exId = lookupId(byName, row.name);
       const actionId = exId ? mapping.actions[exId] : undefined;
       if (!actionId) {
         // Only report Voltra-looking rows; dumbbell work is skipped by design.

@@ -2,7 +2,7 @@ import { publicMessage } from "./errors";
 import { parse } from "yaml";
 import { readFile, writeFile } from "./github";
 import { createRoutine, listRoutines, updateRoutine, type Routine, type RoutineExercise } from "./hevy";
-import { parseReps, libraryIds } from "./voltraSession";
+import { parseReps, libraryIds, lookupId } from "./voltraSession";
 import { dayTitle, hevyTitle, isVoltraRow, voltraTitle } from "./session";
 import type { BriefData, Row } from "./types";
 
@@ -91,7 +91,7 @@ export function buildExercises(input: BuildInput): { exercises: RoutineExercise[
   for (const [letter, n] of counts) if (n > 1) ssIds.set(letter, ssIds.size);
 
   for (const row of iron) {
-    const libId = input.libraryIds.get(row.name.toLowerCase());
+    const libId = lookupId(input.libraryIds, row.name);
     const title = libId ? input.hevyTitles.get(libId) : undefined;
     const templateId = title ? input.templateIds.get(title.toLowerCase()) : undefined;
     if (!templateId) {

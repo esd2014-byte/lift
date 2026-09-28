@@ -125,6 +125,14 @@ const eq = (label, got, want) => {
   eq("superset cleared when its partner is on the Voltra", exercises[3].superset_id, null);
   eq("timed set", [exercises[4].sets[0].duration_seconds, exercises[4].sets[0].reps], [45, null]);
   eq("clean notes", exercises[2].notes, "RPE 8 · 3 × 8-12 · target 25 lb · Priority muscle");
+
+  // The brief abbreviates; the library doesn't.
+  const V = await import(`${out}/voltraSession.js`);
+  const ids = V.libraryIds("push:\n  - {id: nuobell_seated_ohp, name: NUOBELL Seated Overhead Press}\n  - {id: rdl, name: Dumbbell Romanian Deadlift}\n");
+  eq("OHP matches Overhead Press", V.lookupId(ids, "NUOBELL Seated OHP"), "nuobell_seated_ohp");
+  eq("DB RDL matches", V.lookupId(ids, "DB RDL"), "rdl");
+  eq("exact still wins", V.lookupId(ids, "nuobell seated overhead press"), "nuobell_seated_ohp");
+  eq("unknown stays unknown", V.lookupId(ids, "Mystery Move"), undefined);
 }
 
 if (failed) {
