@@ -9,7 +9,7 @@ export function upsertCsvDay(
   current: string | null,
   header: string,
   date: string,
-  row: string,
+  row: string
 ): { text: string; rows: string[] } {
   const lines = (current ?? header + "\n").trimEnd().split("\n");
   const head = lines[0] || header;

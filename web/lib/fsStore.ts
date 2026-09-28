@@ -64,7 +64,7 @@ export async function listDir(rel: string): Promise<string[]> {
 
 export async function readMany(
   paths: string[],
-  dirs: string[] = [],
+  dirs: string[] = []
 ): Promise<{ files: Record<string, string | null>; dirs: Record<string, string[]> }> {
   const files: Record<string, string | null> = {};
   const listed: Record<string, string[]> = {};
@@ -79,7 +79,7 @@ export async function readMany(
 export async function updateFile(
   rel: string,
   change: (current: string | null) => string | null,
-  message: string,
+  message: string
 ): Promise<{ changed: boolean; sha?: string }> {
   const full = resolve(rel);
   const current = await readOrNull(full);

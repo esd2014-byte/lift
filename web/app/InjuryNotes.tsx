@@ -30,7 +30,9 @@ export default function InjuryNotes({ html }: { html: string }) {
 
   return (
     <section>
-      <div className="head"><h2>Injury notes</h2></div>
+      <div className="head">
+        <h2>Injury notes</h2>
+      </div>
       {html.trim() ? (
         <div className="coach" dangerouslySetInnerHTML={{ __html: html }} />
       ) : (
@@ -42,8 +44,8 @@ export default function InjuryNotes({ html }: { html: string }) {
           <b>Note saved.</b>
           <div style={{ marginTop: 6 }}>&ldquo;{note.trim()}&rdquo;</div>
           <div style={{ marginTop: 10, fontSize: ".84rem" }}>
-            Tomorrow&apos;s brief reads this and proposes a change to the standing injury rules if
-            one is warranted. It won&apos;t silently rewrite them.
+            Tomorrow&apos;s brief reads this and proposes a change to the standing injury rules if one is warranted. It
+            won&apos;t silently rewrite them.
           </div>
         </div>
       ) : (
@@ -58,7 +60,12 @@ export default function InjuryNotes({ html }: { html: string }) {
             onChange={(e) => setNote(e.target.value)}
             placeholder="Left shoulder felt fine on incline today, first time in months. Right elbow a bit sore on curls — watch it."
           />
-          <button className="btn block quiet" onClick={save} disabled={state === "saving" || !note.trim()} style={{ marginTop: 10 }}>
+          <button
+            className="btn block quiet"
+            onClick={save}
+            disabled={state === "saving" || !note.trim()}
+            style={{ marginTop: 10 }}
+          >
             {state === "saving" ? "Saving…" : "Add injury note"}
           </button>
           {state === "error" && <p className="note">Didn&apos;t save. Try again.</p>}

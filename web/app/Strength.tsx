@@ -10,12 +10,16 @@ const shortDate = (iso: string) =>
 export default function Strength({ m }: { m: Metrics }) {
   return (
     <section>
-      <div className="head"><h2>Strength</h2></div>
+      <div className="head">
+        <h2>Strength</h2>
+      </div>
       <div className="card">
         <p className="eyebrow">Strength index</p>
         <div className="indexrow">
           {m.strengthIndex !== null && <span className="bignum num">{m.strengthIndex}</span>}
-          <span className="sub" style={{ paddingBottom: 5 }}>{m.indexNote}</span>
+          <span className="sub" style={{ paddingBottom: 5 }}>
+            {m.indexNote}
+          </span>
         </div>
         <div className="lifts" style={{ marginTop: 12 }}>
           {m.anchors.map((a) => (

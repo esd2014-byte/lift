@@ -26,7 +26,10 @@ async function handlePOST(req: NextRequest) {
 
     const [, ext, b64] = m;
     if (base64Bytes(b64) > MAX_PHOTO_BYTES) {
-      return NextResponse.json({ error: `photo is over ${MAX_PHOTO_BYTES / 1_000_000} MB after shrinking` }, { status: 413 });
+      return NextResponse.json(
+        { error: `photo is over ${MAX_PHOTO_BYTES / 1_000_000} MB after shrinking` },
+        { status: 413 }
+      );
     }
 
     const today = todayISO();

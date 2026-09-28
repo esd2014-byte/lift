@@ -34,7 +34,8 @@ async function handlePOST(req: NextRequest) {
     const today = todayISO();
     await updateFile(
       path,
-      (cur) => upsertCsvDay(cur, header, today, `${values.waist ?? ""},${values.arm ?? ""},${values.shoulder ?? ""}`).text,
+      (cur) =>
+        upsertCsvDay(cur, header, today, `${values.waist ?? ""},${values.arm ?? ""},${values.shoulder ?? ""}`).text,
       `Measurements ${today}`
     );
     return NextResponse.json({ ok: true, date: today, values });

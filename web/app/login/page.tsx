@@ -10,7 +10,15 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
         <label htmlFor="secret" className="eyebrow" style={{ display: "block", marginBottom: 7 }}>
           App secret
         </label>
-        <input id="secret" name="secret" type="password" autoComplete="current-password" required autoFocus style={{ width: "100%" }} />
+        <input
+          id="secret"
+          name="secret"
+          type="password"
+          autoComplete="current-password"
+          required
+          autoFocus
+          style={{ width: "100%" }}
+        />
         {e && (
           <p className="note" role="alert">
             That&apos;s not it.

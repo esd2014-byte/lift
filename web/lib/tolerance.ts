@@ -31,10 +31,7 @@ export function applyTolerances(raw: string, updates: Record<string, string>): s
     const end = nextItem === -1 ? out.length : start + 1 + nextItem;
 
     const entry = out.slice(start, end);
-    const replaced = entry.replace(
-      /tolerance:\s*(loved|fine|untested|disliked|forbidden)/,
-      `tolerance: ${value}`
-    );
+    const replaced = entry.replace(/tolerance:\s*(loved|fine|untested|disliked|forbidden)/, `tolerance: ${value}`);
     if (replaced === entry) throw new Error(`no tolerance field found for: ${id}`);
 
     out = out.slice(0, start) + replaced + out.slice(end);

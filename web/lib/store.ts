@@ -14,13 +14,13 @@ export type DataStore = {
   readFile(path: string): Promise<string | null>;
   readMany(
     paths: string[],
-    dirs?: string[],
+    dirs?: string[]
   ): Promise<{ files: Record<string, string | null>; dirs: Record<string, string[]> }>;
   listDir(path: string): Promise<string[]>;
   updateFile(
     path: string,
     change: (current: string | null) => string | null,
-    message: string,
+    message: string
   ): Promise<{ changed: boolean; sha?: string }>;
   writeFile(path: string, content: string, message: string): Promise<{ changed: boolean; sha?: string }>;
   writeBinaryFile(path: string, base64: string, message: string): Promise<unknown>;

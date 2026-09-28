@@ -178,10 +178,22 @@ export default function Today({
 
   const pushLine = (p: Push | undefined, app: string) => {
     if (!p || p.action === "none") return null;
-    if (!p.ok) return <span className="bad-text">{app} not updated: {p.error}. </span>;
-    const extra = [p.skipped?.length ? `left out: ${p.skipped.join(", ")}` : "", p.note ?? ""].filter(Boolean).join("; ");
+    if (!p.ok)
+      return (
+        <span className="bad-text">
+          {app} not updated: {p.error}.{" "}
+        </span>
+      );
+    const extra = [p.skipped?.length ? `left out: ${p.skipped.join(", ")}` : "", p.note ?? ""]
+      .filter(Boolean)
+      .join("; ");
     const verb = p.action === "kept" ? "already there" : p.action;
-    return <span>{app}: &ldquo;{p.title}&rdquo; {verb}{extra ? ` (${extra})` : ""}. </span>;
+    return (
+      <span>
+        {app}: &ldquo;{p.title}&rdquo; {verb}
+        {extra ? ` (${extra})` : ""}.{" "}
+      </span>
+    );
   };
 
   return (
@@ -217,7 +229,8 @@ export default function Today({
         </p>
         {stale ? (
           <p className="sub">
-            Today&apos;s brief isn&apos;t written yet, so this is {weekday(data.date)}&apos;s plan. Still a good session.
+            Today&apos;s brief isn&apos;t written yet, so this is {weekday(data.date)}&apos;s plan. Still a good
+            session.
           </p>
         ) : active === keys[0] ? (
           data.headline && <p className="sub">{data.headline}</p>
@@ -240,7 +253,13 @@ export default function Today({
             {keys.map((k) => {
               const vv = data.variants[k];
               return (
-                <button key={k} className="variant" data-v={k} aria-pressed={!restOpen && active === k} onClick={() => pick(k)}>
+                <button
+                  key={k}
+                  className="variant"
+                  data-v={k}
+                  aria-pressed={!restOpen && active === k}
+                  onClick={() => pick(k)}
+                >
                   <span className="vname">{vv.label ?? META[k].label}</span>
                   <span className="vmeta">{vv.meta ?? META[k].fallback}</span>
                 </button>
@@ -255,8 +274,8 @@ export default function Today({
           {restOpen && rest !== "done" && (
             <div style={{ marginTop: 11 }}>
               <div className="callout warn">
-                <b>This marks today as a planned rest day, not a miss.</b> Tell me what&apos;s in the way
-                and tomorrow&apos;s brief adjusts around it.
+                <b>This marks today as a planned rest day, not a miss.</b> Tell me what&apos;s in the way and
+                tomorrow&apos;s brief adjusts around it.
               </div>
               <label htmlFor="reason" className="eyebrow" style={{ margin: "12px 0 7px", display: "block" }}>
                 What&apos;s in the way?
@@ -268,7 +287,12 @@ export default function Today({
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Traveling all week, offsite, fully programmed dawn to dark. Back Sunday night."
               />
-              <button className="btn block" onClick={saveRest} disabled={rest === "saving" || !reason.trim()} style={{ marginTop: 11 }}>
+              <button
+                className="btn block"
+                onClick={saveRest}
+                disabled={rest === "saving" || !reason.trim()}
+                style={{ marginTop: 11 }}
+              >
                 {rest === "saving" ? "Saving…" : "Log it"}
               </button>
               {rest === "error" && <p className="note">Didn&apos;t save. Try again.</p>}
@@ -280,8 +304,8 @@ export default function Today({
               <b>Logged as a rest day.</b>
               <div style={{ marginTop: 6 }}>&ldquo;{reason.trim()}&rdquo;</div>
               <div style={{ marginTop: 10, fontSize: ".84rem" }}>
-                Today stops counting as a miss, the streak holds, and tomorrow&apos;s brief opens from
-                what you said rather than from a silent gap.
+                Today stops counting as a miss, the streak holds, and tomorrow&apos;s brief opens from what you said
+                rather than from a silent gap.
               </div>
             </div>
           )}
@@ -295,12 +319,20 @@ export default function Today({
             <div className="callout accent" role="status">
               <b>
                 Workout logged
-                {ended?.minutes != null ? <>: <span className="num">{ended.minutes}</span> min</> : " (it ran too long to trust the time)"} 🔥
+                {ended?.minutes != null ? (
+                  <>
+                    : <span className="num">{ended.minutes}</span> min
+                  </>
+                ) : (
+                  " (it ran too long to trust the time)"
+                )}{" "}
+                🔥
               </b>
               <div style={{ marginTop: 6, fontSize: ".84rem" }}>
                 {(ended?.syncs ?? []).map((s) => (
                   <div key={s.source}>
-                    {s.source === "hevy" ? "Hevy" : "Voltra"}: {s.ok ? "synced ✓" : `sync failed (${s.error}). The 6am sync will retry.`}
+                    {s.source === "hevy" ? "Hevy" : "Voltra"}:{" "}
+                    {s.ok ? "synced ✓" : `sync failed (${s.error}). The 6am sync will retry.`}
                   </div>
                 ))}
               </div>
@@ -308,7 +340,9 @@ export default function Today({
           ) : isRunning ? (
             <>
               <div className="timer">
-                <span className="eyebrow" style={{ margin: 0 }}>Elapsed</span>
+                <span className="eyebrow" style={{ margin: 0 }}>
+                  Elapsed
+                </span>
                 <span className="num timer-value">{startedAt ? clock(now - Date.parse(startedAt)) : "0:00"}</span>
               </div>
               <button
@@ -316,18 +350,34 @@ export default function Today({
                 onClick={endWorkout}
                 disabled={phase === "ending"}
               >
-                {phase === "ending" ? "Logging and syncing…" : phase === "confirm-end" ? "Tap again to end" : "End workout"}
+                {phase === "ending"
+                  ? "Logging and syncing…"
+                  : phase === "confirm-end"
+                    ? "Tap again to end"
+                    : "End workout"}
               </button>
               {phase === "confirm-end" && (
                 <p className="hint">Finish the workout in Hevy too. Hevy only syncs finished workouts.</p>
               )}
             </>
           ) : (
-            <button className="btn block big" onClick={startWorkout} disabled={phase === "starting" || Boolean(unfinished)}>
-              {phase === "starting" ? "Setting up Hevy and the Voltra…" : doneToday.length ? "Start another workout" : "Start workout"}
+            <button
+              className="btn block big"
+              onClick={startWorkout}
+              disabled={phase === "starting" || Boolean(unfinished)}
+            >
+              {phase === "starting"
+                ? "Setting up Hevy and the Voltra…"
+                : doneToday.length
+                  ? "Start another workout"
+                  : "Start workout"}
             </button>
           )}
-          {error && <p className="note" role="alert">{error}</p>}
+          {error && (
+            <p className="note" role="alert">
+              {error}
+            </p>
+          )}
 
           {/* ---- where to log it ---- */}
           <div className="launch" style={{ marginTop: 10 }}>
@@ -370,15 +420,15 @@ export default function Today({
           </p>
           {hevyLeftOpen && (
             <p className="hint warn-text">
-              Your Hevy workout on {weekday(hevyLeftOpen)} ran for hours, so it was probably left open. Finish
-              workouts in Hevy when you&apos;re done, or they don&apos;t sync.
+              Your Hevy workout on {weekday(hevyLeftOpen)} ran for hours, so it was probably left open. Finish workouts
+              in Hevy when you&apos;re done, or they don&apos;t sync.
             </p>
           )}
           {voltraUnnamedRecent > 0 && (
             <p className="hint warn-text">
               {voltraUnnamedRecent} recent Voltra session{voltraUnnamedRecent === 1 ? " was" : "s were"} logged as
-              &ldquo;Free Exercises&rdquo;: {voltraUnnamedRecent === 1 ? "it counts" : "they count"} as a training
-              day, but not toward strength. Start from the named session instead of free mode.
+              &ldquo;Free Exercises&rdquo;: {voltraUnnamedRecent === 1 ? "it counts" : "they count"} as a training day,
+              but not toward strength. Start from the named session instead of free mode.
             </p>
           )}
 
@@ -390,16 +440,16 @@ export default function Today({
           )}
           {calibrating > 0 && (
             <div className="callout warn" style={{ marginTop: 10 }}>
-              <b>Calibration day for {calibrating === 1 ? "one Voltra lift" : `${calibrating} Voltra lifts`}.</b> The brief
-              didn&apos;t set {calibrating === 1 ? "its weight" : "their weights"}, so Lift guessed from your history. Each is
-              marked below: treat set 1 as a feeler, adjust, and log what you finish on.
+              <b>Calibration day for {calibrating === 1 ? "one Voltra lift" : `${calibrating} Voltra lifts`}.</b> The
+              brief didn&apos;t set {calibrating === 1 ? "its weight" : "their weights"}, so Lift guessed from your
+              history. Each is marked below: treat set 1 as a feeler, adjust, and log what you finish on.
             </div>
           )}
           <p className="handoff">
             {hevyRows > 0 && voltraRows > 0 ? (
               <>
-                <b>{hevyRows}</b> in Hevy, <b>{voltraRows}</b> on the Voltra. In a superset, do the cable set,
-                then the dumbbell set during the Voltra&apos;s rest, and tick it in Hevy.
+                <b>{hevyRows}</b> in Hevy, <b>{voltraRows}</b> on the Voltra. In a superset, do the cable set, then the
+                dumbbell set during the Voltra&apos;s rest, and tick it in Hevy.
               </>
             ) : voltraRows > 0 ? (
               <>Everything today is on the Voltra.</>
@@ -423,14 +473,16 @@ export default function Today({
                     <td>
                       {r.superset && <span className="ss">{r.superset}</span>} <span className="exname">{r.name}</span>
                       <div className="station">
-                        <span className={`where ${isVoltraRow(r) ? "where-voltra" : "where-hevy"}`}>{isVoltraRow(r) ? "Voltra" : "Hevy"}</span>
+                        <span className={`where ${isVoltraRow(r) ? "where-voltra" : "where-hevy"}`}>
+                          {isVoltraRow(r) ? "Voltra" : "Hevy"}
+                        </span>
                         {r.station && <> · {r.station}</>}
                       </div>
                       {r.calibration && (
                         <div className="calib">
-                          <b>Calibration:</b> {r.load_lb} lb is a guess ({r.calibration.basis}). Target {r.calibration.reps}{" "}
-                          at RPE {r.calibration.rpe}. After set 1, go up 5–10 lb if it felt easier than RPE{" "}
-                          {r.calibration.rpe}, down if harder.
+                          <b>Calibration:</b> {r.load_lb} lb is a guess ({r.calibration.basis}). Target{" "}
+                          {r.calibration.reps} at RPE {r.calibration.rpe}. After set 1, go up 5–10 lb if it felt easier
+                          than RPE {r.calibration.rpe}, down if harder.
                         </div>
                       )}
                     </td>

@@ -23,7 +23,9 @@ execSync(
 const { renderMarkdown } = await import(`${out}/markdown.js`);
 
 const briefsDir = join(here, "fixtures/briefs");
-const briefs = readdirSync(briefsDir).filter((f) => f.endsWith(".md")).sort();
+const briefs = readdirSync(briefsDir)
+  .filter((f) => f.endsWith(".md"))
+  .sort();
 if (!briefs.length) {
   console.log("no briefs to test against - skipping");
   process.exit(0);
@@ -63,15 +65,20 @@ for (const [label, md] of Object.entries(hostile)) {
   // Every tag must be one the renderer emits, and every link exactly this shape -
   // so an injected attribute can't hide anywhere.
   const tags = html.match(/<[^>]+>/g) ?? [];
-  const ok = tags.every((t) =>
-    /^<\/?(p|strong|em|code|a)>$/.test(t) ||
-    /^<a href="https:\/\/[^"\s]*" rel="noopener noreferrer" target="_blank">$/.test(t)
+  const ok = tags.every(
+    (t) =>
+      /^<\/?(p|strong|em|code|a)>$/.test(t) ||
+      /^<a href="https:\/\/[^"\s]*" rel="noopener noreferrer" target="_blank">$/.test(t)
   );
-  if (!ok) { console.log(`FAIL  ${label}: ${html}`); failed++; }
+  if (!ok) {
+    console.log(`FAIL  ${label}: ${html}`);
+    failed++;
+  }
 }
 const good = renderMarkdown("[docs](https://example.com/a?b=1&c=2)");
 if (!good.includes('href="https://example.com/a?b=1&amp;c=2"') || !good.includes('rel="noopener noreferrer"')) {
-  console.log(`FAIL  https link renders: ${good}`); failed++;
+  console.log(`FAIL  https link renders: ${good}`);
+  failed++;
 }
 
 console.log(failed ? `\n${failed} failure(s)` : `ok - ${briefs.length} brief(s) render cleanly, hostile input escaped`);

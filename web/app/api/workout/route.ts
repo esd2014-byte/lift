@@ -64,7 +64,11 @@ async function handlePOST(req: NextRequest) {
       await Promise.all([
         updateFile(LOG, (cur) => json(start(parseLog(cur), entry)), `Workout started ${today}: ${variant}`),
         // The committed choice, in the file the coach already reads.
-        updateFile(VARIANTS, (cur) => upsertJsonDay(cur, { date: today, variant, at: now }), `Variant ${today}: ${variant}`),
+        updateFile(
+          VARIANTS,
+          (cur) => upsertJsonDay(cur, { date: today, variant, at: now }),
+          `Variant ${today}: ${variant}`
+        ),
       ]);
 
       const [hevy, voltra] = await Promise.all([

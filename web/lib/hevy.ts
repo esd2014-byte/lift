@@ -13,7 +13,9 @@ const TIMEOUT_MS = 10_000;
 function withTimeout(label: string) {
   return (err: unknown): never => {
     const timedOut = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
-    throw new Error(timedOut ? `Hevy didn't answer within ${TIMEOUT_MS / 1000}s (${label})` : `Couldn't reach Hevy (${label})`);
+    throw new Error(
+      timedOut ? `Hevy didn't answer within ${TIMEOUT_MS / 1000}s (${label})` : `Couldn't reach Hevy (${label})`
+    );
   };
 }
 
@@ -26,9 +28,11 @@ function key() {
 async function get(path: string, params: Record<string, string | number> = {}) {
   const url = new URL(BASE + path);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
-  const res = await fetch(url, { headers: { "api-key": key() }, cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) }).catch(
-    withTimeout(path)
-  );
+  const res = await fetch(url, {
+    headers: { "api-key": key() },
+    cache: "no-store",
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  }).catch(withTimeout(path));
   if (!res.ok) throw new Error(`Hevy ${path}: ${res.status}`);
   return res.json();
 }
@@ -59,7 +63,12 @@ export type Workout = {
   exercises: Array<{
     title: string;
     notes?: string;
-    sets: Array<{ weight_kg?: number | null; reps?: number | null; rpe?: number | null; duration_seconds?: number | null }>;
+    sets: Array<{
+      weight_kg?: number | null;
+      reps?: number | null;
+      rpe?: number | null;
+      duration_seconds?: number | null;
+    }>;
   }>;
 };
 
@@ -126,6 +135,9 @@ export async function createRoutine(routine: { title: string; notes: string; exe
   return r as { id: string };
 }
 
-export async function updateRoutine(id: string, routine: { title: string; notes: string; exercises: RoutineExercise[] }) {
+export async function updateRoutine(
+  id: string,
+  routine: { title: string; notes: string; exercises: RoutineExercise[] }
+) {
   return send("PUT", `/routines/${id}`, { routine });
 }

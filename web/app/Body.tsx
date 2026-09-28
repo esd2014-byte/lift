@@ -83,7 +83,12 @@ export default function Body({ state }: { state: DayState }) {
           img.onload = () => {
             // 1200px at q0.8 is usually ~300 KB. If a photo still comes out over the
             // server's limit, step down until it fits rather than failing the upload.
-            for (const [edge, quality] of [[1200, 0.8], [1200, 0.6], [900, 0.6], [700, 0.5]] as const) {
+            for (const [edge, quality] of [
+              [1200, 0.8],
+              [1200, 0.6],
+              [900, 0.6],
+              [700, 0.5],
+            ] as const) {
               const scale = Math.min(1, edge / Math.max(img.width, img.height));
               const c = document.createElement("canvas");
               c.width = Math.round(img.width * scale);
@@ -130,7 +135,9 @@ export default function Body({ state }: { state: DayState }) {
           {bwState === "done" && result ? (
             <>
               <p className="eyebrow">Bodyweight logged</p>
-              <div className="bignum num" style={{ fontSize: "1.7rem" }}>{result.weight} lb</div>
+              <div className="bignum num" style={{ fontSize: "1.7rem" }}>
+                {result.weight} lb
+              </div>
               <p className="sub">
                 7-day average <span className="num">{result.rolling7}</span> lb · {result.n} of 7 days
               </p>
@@ -141,7 +148,10 @@ export default function Body({ state }: { state: DayState }) {
               <p className="sub" style={{ margin: 0 }}>
                 Skipped today.
                 {bw.rolling7 !== null && (
-                  <> The 7-day average holds at <span className="num">{bw.rolling7}</span> lb.</>
+                  <>
+                    {" "}
+                    The 7-day average holds at <span className="num">{bw.rolling7}</span> lb.
+                  </>
                 )}
               </p>
             </>
@@ -168,7 +178,9 @@ export default function Body({ state }: { state: DayState }) {
                 </button>
               </div>
               <div style={{ marginTop: 9, display: "flex", gap: 14, alignItems: "center" }}>
-                <button className="linkish" onClick={() => postWeight("skip")}>Skip today</button>
+                <button className="linkish" onClick={() => postWeight("skip")}>
+                  Skip today
+                </button>
                 {bw.rolling7 !== null && (
                   <span className="sub" style={{ margin: 0 }}>
                     7-day avg <span className="num">{bw.rolling7}</span> lb
@@ -186,7 +198,9 @@ export default function Body({ state }: { state: DayState }) {
             Measurements <span className={`pill ${measDue.kind}`}>{measDue.text}</span>
           </p>
           {measState === "done" ? (
-            <p className="sub" style={{ margin: 0 }}>Saved. Next one due in 7 days.</p>
+            <p className="sub" style={{ margin: 0 }}>
+              Saved. Next one due in 7 days.
+            </p>
           ) : (
             <>
               <div className="measure">
@@ -205,11 +219,18 @@ export default function Body({ state }: { state: DayState }) {
                 ))}
               </div>
               <p className="guide">
-                <b>Waist</b> at the navel, relaxed, at the end of an exhale — don&apos;t suck in.<br />
-                <b>Arm</b> at the mid-bicep, flexed, elbow at 90°. Same arm every time.<br />
+                <b>Waist</b> at the navel, relaxed, at the end of an exhale — don&apos;t suck in.
+                <br />
+                <b>Arm</b> at the mid-bicep, flexed, elbow at 90°. Same arm every time.
+                <br />
                 <b>Shoulder</b> around the widest point across the delts, arms at your sides.
               </p>
-              <button className="btn block quiet" onClick={saveMeasurements} disabled={measState === "saving"} style={{ marginTop: 11 }}>
+              <button
+                className="btn block quiet"
+                onClick={saveMeasurements}
+                disabled={measState === "saving"}
+                style={{ marginTop: 11 }}
+              >
                 {measState === "saving" ? "Saving…" : "Save measurements"}
               </button>
               {measState === "error" && <p className="note">Didn&apos;t save. Try again.</p>}
@@ -223,26 +244,41 @@ export default function Body({ state }: { state: DayState }) {
             Progress photo <span className={`pill ${photoDue.kind}`}>{photoDue.text}</span>
           </p>
           {photoState === "done" ? (
-            <p className="sub" style={{ margin: 0 }}>Saved to the repo. Next one due in 7 days.</p>
+            <p className="sub" style={{ margin: 0 }}>
+              Saved to the repo. Next one due in 7 days.
+            </p>
           ) : (
             <>
-              <div className="photobox">
-                Front, side, back — mirror selfie, same spot and light each week
-              </div>
+              <div className="photobox">Front, side, back — mirror selfie, same spot and light each week</div>
               <div className="photorow" style={{ marginTop: 10 }}>
-                <button className="btn quiet" onClick={() => camRef.current?.click()} disabled={photoState === "saving"}>
+                <button
+                  className="btn quiet"
+                  onClick={() => camRef.current?.click()}
+                  disabled={photoState === "saving"}
+                >
                   {photoState === "saving" ? "Uploading…" : "Take photo"}
                 </button>
-                <button className="btn quiet" onClick={() => libRef.current?.click()} disabled={photoState === "saving"}>
+                <button
+                  className="btn quiet"
+                  onClick={() => libRef.current?.click()}
+                  disabled={photoState === "saving"}
+                >
                   Choose photo
                 </button>
               </div>
               <input
-                ref={camRef} type="file" accept="image/*" capture="user" hidden
+                ref={camRef}
+                type="file"
+                accept="image/*"
+                capture="user"
+                hidden
                 onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
               />
               <input
-                ref={libRef} type="file" accept="image/*" hidden
+                ref={libRef}
+                type="file"
+                accept="image/*"
+                hidden
                 onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
               />
               {photoState === "error" && <p className="note">Upload failed. Try again.</p>}

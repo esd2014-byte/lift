@@ -23,13 +23,18 @@ const { applyTolerances } = await import(`${out}/tolerance.js`);
 
 const raw = readFileSync(join(here, "fixtures/exercises.yaml"), "utf8");
 let failed = 0;
-const check = (label, ok) => { if (!ok) { console.log(`FAIL  ${label}`); failed++; } };
+const check = (label, ok) => {
+  if (!ok) {
+    console.log(`FAIL  ${label}`);
+    failed++;
+  }
+};
 
 // A block-style entry (the anchors) and a flow-style entry (accessories) - the file
 // uses both shapes, and the editor has to handle each.
 const edited = applyTolerances(raw, {
-  voltra_belt_squat: "loved",        // block style
-  db_lateral_raise: "disliked",      // flow style
+  voltra_belt_squat: "loved", // block style
+  db_lateral_raise: "disliked", // flow style
 });
 
 check("block entry updated", /id: voltra_belt_squat[\s\S]{0,600}?tolerance: loved/.test(edited));
@@ -54,10 +59,18 @@ check(`exactly ${expected} line(s) changed (got ${diffLines})`, diffLines === ex
 
 // Bad input must be refused, not silently written.
 let threw = false;
-try { applyTolerances(raw, { voltra_belt_squat: "amazing" }); } catch { threw = true; }
+try {
+  applyTolerances(raw, { voltra_belt_squat: "amazing" });
+} catch {
+  threw = true;
+}
 check("rejects an invalid tolerance value", threw);
 threw = false;
-try { applyTolerances(raw, { not_a_real_exercise: "loved" }); } catch { threw = true; }
+try {
+  applyTolerances(raw, { not_a_real_exercise: "loved" });
+} catch {
+  threw = true;
+}
 check("rejects an unknown exercise id", threw);
 
 console.log(failed ? `\n${failed} failure(s)` : "ok - tolerance editor preserves the file");
