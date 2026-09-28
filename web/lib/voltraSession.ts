@@ -135,8 +135,24 @@ export async function pushVoltraSession(
     const existing = (await listSessions()).find(
       (s) => s.title === title || s.title.endsWith(dateSuffix) || s.title === legacy
     );
-    if (existing) await updateSession(existing.id, payload);
-    else await createSession(payload);
+    const reply = existing ? await updateSession(existing.id, payload) : await createSession(payload);
+    const replyText = JSON.stringify(reply ?? {}).slice(0, 300);
+    console.info(`voltra session ${existing ? "update" : "create"} "${title}": ${replyText}`);
+
+    // Read it back. The device API can answer a request it didn't act on with a
+    // success status (a rejected payload looks like a normal reply), so the only
+    // proof a session exists is finding it in the list.
+    const saved = (await listSessions()).some((s) => s.title === title);
+    if (!saved) {
+      console.error(`voltra session "${title}" not found after ${existing ? "update" : "create"}`, replyText);
+      return {
+        ok: false,
+        title,
+        error: `Beyond+ didn't save "${title}". It replied: ${replyText.slice(0, 160)}`,
+        skipped,
+        guessedLoads,
+      };
+    }
 
     return {
       ok: true,
