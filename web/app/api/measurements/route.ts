@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logged } from "@/lib/log";
 import { publicMessage } from "@/lib/errors";
 import { requireAuth } from "@/lib/guard";
 import { updateFile } from "@/lib/github";
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 const FIELDS = ["waist", "arm", "shoulder"] as const;
 
 /** Weekly tape measurements. Waist vs arm is what the lean-gain guardrail runs on. */
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const denied = requireAuth(req);
   if (denied) return denied;
   try {
@@ -46,3 +47,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: publicMessage(err) }, { status: 500 });
   }
 }
+
+export const POST = logged("measurements", handlePOST);

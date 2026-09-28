@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logged } from "@/lib/log";
 import { publicMessage } from "@/lib/errors";
 import { requireAuth } from "@/lib/guard";
 import { updateFile } from "@/lib/github";
@@ -7,13 +8,13 @@ import { todayISO } from "@/lib/date";
 export const dynamic = "force-dynamic";
 
 /**
- * Record a day Eli couldn't train, with his own words for why.
+ * Record a day the athlete couldn't train, in their own words.
  *
  * This matters more than it looks. Without it, a travel week reads to the coach as
  * four silent misses and it downgrades him to short days. With a reason, tomorrow's
  * brief opens from what actually happened, and the streak holds instead of resetting.
  */
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const denied = requireAuth(req);
   if (denied) return denied;
   try {
@@ -46,3 +47,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: publicMessage(err) }, { status: 500 });
   }
 }
+
+export const POST = logged("rest-day", handlePOST);

@@ -8,10 +8,13 @@ import { useState } from "react";
  * (that's the morning routine's job and it needs a model), so the copy says which.
  */
 export default function Freshness({
+  zone,
   stale,
   briefDate,
   generatedAt,
 }: {
+  /** The app's time zone. Passed in: this runs in the browser, which can't read server settings. */
+  zone: string;
   stale: boolean;
   briefDate: string | null;
   generatedAt: string | null;
@@ -39,7 +42,7 @@ export default function Freshness({
     ? new Date(generatedAt).toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
-        timeZone: "America/New_York",
+        timeZone: zone,
       })
     : null;
 

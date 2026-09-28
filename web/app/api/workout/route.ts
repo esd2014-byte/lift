@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logged } from "@/lib/log";
 import { publicMessage } from "@/lib/errors";
 import { requireAuth } from "@/lib/guard";
 import { readFile, updateFile } from "@/lib/github";
@@ -31,7 +32,7 @@ const VARIANTS = "logs/variants.json";
  *
  * The pushes and syncs report their own failures; neither can undo a start or end.
  */
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const denied = requireAuth(req);
   if (denied) return denied;
   try {
@@ -112,3 +113,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: publicMessage(err) }, { status: 500 });
   }
 }
+
+export const POST = logged("workout", handlePOST);

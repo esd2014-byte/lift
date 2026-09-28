@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logged } from "@/lib/log";
 import { publicMessage } from "@/lib/errors";
 import { requireAuth } from "@/lib/guard";
 import { updateFile } from "@/lib/github";
@@ -14,7 +15,7 @@ export const dynamic = "force-dynamic";
  * deliberately, not by appending a note from a phone at 7am. The morning routine
  * reads this log, reasons about it, and proposes changes to the rules.
  */
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const denied = requireAuth(req);
   if (denied) return denied;
   try {
@@ -36,3 +37,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: publicMessage(err) }, { status: 500 });
   }
 }
+
+export const POST = logged("injury-note", handlePOST);

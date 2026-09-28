@@ -67,7 +67,7 @@ shows it in the session table, which saves looking it up mid-set.
 ### `hevy_routine` — which routine to open
 
 Optional, per variant. The app shows a **Begin selected workout** control with a Hevy
-button, and that button has to name the routine Eli should actually tap.
+button, and that button has to name the routine the athlete should actually tap.
 
 Usually it's the day's own routine (`"Day F — Prehab + Core + Conditioning (short)"`),
 so it can be omitted. **Beast mode is the case that needs it** — promoting to Day E

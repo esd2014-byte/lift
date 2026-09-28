@@ -1,9 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Briefs are committed to the repo by the cloud routine and read at request time,
-  // so nothing here may be statically cached.
-  experimental: {},
   poweredByHeader: false,
 
   // Baseline headers on every response. The Content Security Policy is set per

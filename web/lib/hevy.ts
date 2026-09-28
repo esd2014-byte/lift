@@ -2,7 +2,7 @@
  * Hevy API client.
  *
  * This lives in the Vercel app rather than the cloud routine because the routine
- * runs in a sandbox with no access to Eli's secrets. Vercel holds the key, syncs
+ * runs in a sandbox with no access to the athlete's secrets. Vercel holds the key, syncs
  * the data into the repo, and the routine reads the repo. One secret, one place.
  */
 const BASE = "https://api.hevyapp.com/v1";

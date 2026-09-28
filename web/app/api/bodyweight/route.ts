@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logged } from "@/lib/log";
 import { publicMessage } from "@/lib/errors";
 import { requireAuth } from "@/lib/guard";
 import { updateFile } from "@/lib/github";
@@ -10,11 +11,11 @@ export const dynamic = "force-dynamic";
 /**
  * Append today's bodyweight to logs/bodyweight.csv in the repo.
  *
- * Daily bodyweight is the input Eli asked for, and it's the one the lean-gain
+ * Daily bodyweight is the input the athlete asked for, and it's the one the lean-gain
  * guardrail depends on - a 7-day rolling average is the only reading of
  * bodyweight that means anything.
  */
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const denied = requireAuth(req);
   if (denied) return denied;
   try {
@@ -57,3 +58,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: publicMessage(err) }, { status: 500 });
   }
 }
+
+export const POST = logged("bodyweight", handlePOST);
