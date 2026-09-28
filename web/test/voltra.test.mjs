@@ -40,14 +40,41 @@ globalThis.fetch = async (url, init) => {
   calls.push({ url, method: init?.method ?? "GET", body: init?.body ? JSON.parse(init.body) : null });
   return new Response(reply.body || null, { status: reply.status });
 };
-const item = {
-  itemGroupPosition: 1, workoutMode: 1, handMode: 2, actionId: 7, actionModeConfig: {},
-  itemDetails: [{ position: 1, repCount: 8, restTime: 90, tag: 0, modeConfig: { baseValue: 60, direction: 0 } }],
-};
-const payload = {
-  title: "2026.09.28", sessionConfig: {}, blockList: [{ blockType: 1, itemList: [item] }],
-  originSessionId: null, accountRole: 0, connectionMode: 0, label: 0,
-};
+const item = V.sessionItem({ position: 1, actionId: 7, lb: 60.4, sets: 3, reps: 8, restSec: 95, oneArm: false });
+const oneArm = V.sessionItem({ position: 2, actionId: 9, lb: 300, sets: 2, reps: 12, restSec: 60, oneArm: true });
+const payload = V.sessionPayload("2026.09.28", [item, oneArm]);
+
+// The contract (Cortex session-schema-reference.md): everything filled in, nothing
+// left for the backend to store as null.
+eq("config objects are complete", Object.keys(item.actionModeConfig).length, 17);
+eq("handMode lives in actionModeConfig", [item.actionModeConfig.handMode, oneArm.actionModeConfig.handMode, "handMode" in item], [2, 1, false]);
+eq("disabled extras are null, never 0", [item.actionModeConfig.chainsValue, item.itemDetails[0].modeConfig.eccentricValue], [null, null]);
+eq("sessionConfig has its defaults", payload.sessionConfig, { autoUnloadHoldingTime: 3, targetRepUnload: false, zeroUnload: false, smartLoadValue: 3 });
+eq("bilateral sets are direction 0", item.itemDetails.map((d) => d.modeConfig.direction), [0, 0, 0]);
+eq("one-arm sets alternate sides", oneArm.itemDetails.map((d) => d.modeConfig.direction), [1, 2, 1, 2]);
+eq("positions are 1-based and consecutive", oneArm.itemDetails.map((d) => d.position), [1, 2, 3, 4]);
+eq("load rounded and clamped", [item.actionModeConfig.baseValue, oneArm.itemDetails[0].modeConfig.baseValue], [60, 230]);
+eq("rest in whole tens", item.itemDetails[0].restTime, 100);
+
+// The vendor's own validator, when the voltra CLI is installed (VOLTRA_BIN, or on
+// PATH). Local and offline: `session validate` needs no key and uploads nothing.
+writeFileSync(join(out, "session.json"), JSON.stringify(payload, null, 2));
+{
+  const bin = process.env.VOLTRA_BIN || "voltra";
+  let stdout = "";
+  try {
+    stdout = execSync(`"${bin}" session validate --from "${join(out, "session.json")}" --json`, { stdio: "pipe" }).toString();
+  } catch (err) {
+    stdout = err.stdout?.toString() ?? "";
+  }
+  const verdict = /"valid":\s*(true|false)/.exec(stdout);
+  if (!verdict) console.log("  (voltra CLI not found; skipped the vendor validator)");
+  else if (verdict[1] !== "true") {
+    console.log(`FAIL  voltra session validate rejected the payload:\n${stdout}`);
+    failed++;
+  }
+}
+
 await V.createSession(payload);
 eq("create endpoint", [calls[0].method, calls[0].url], ["POST", "https://api.beyond-power.com/agent/workout/me/custom-session/v2"]);
 eq("create sends the contract fields", calls[0].body, payload);

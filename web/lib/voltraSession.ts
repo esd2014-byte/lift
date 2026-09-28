@@ -1,7 +1,7 @@
 import { publicMessage } from "./errors";
 import { parse } from "yaml";
 import { readFile } from "./github";
-import { createSession, updateSession, listSessions, clampLoad, type SessionPayload, type SessionItem } from "./voltra";
+import { createSession, updateSession, listSessions, clampLoad, sessionItem, sessionPayload, type SessionItem } from "./voltra";
 import { voltraTitle } from "./session";
 import type { BriefData, Row } from "./types";
 
@@ -102,27 +102,12 @@ export function libraryIds(libRaw: string | null): Map<string, string> {
 export type VoltraPushResult = {
   ok: boolean;
   title?: string;
-  action?: "created" | "updated" | "kept" | "none";
+  action?: "created" | "updated" | "none";
   exercises?: number;
   skipped?: string[];
   guessedLoads?: string[];
-  /** Something worth knowing that didn't stop the push. */
-  note?: string;
   error?: string;
 };
-
-/** The create request around a list of items. Pure, so the contract is testable. */
-export function sessionPayload(title: string, items: SessionItem[]): SessionPayload {
-  return {
-    title,
-    sessionConfig: {},
-    blockList: [{ blockType: 1, itemList: items }],
-    originSessionId: null,
-    accountRole: 0,
-    connectionMode: 0,
-    label: 0,
-  };
-}
 
 export async function pushVoltraSession(
   brief: BriefData,
@@ -156,31 +141,17 @@ export async function pushVoltraSession(
       const load = clampLoad(lb);
       if (guessed) guessedLoads.push(`${row.name} @ ${load} lb`);
 
-      const oneArm = mapping.unilateral?.includes(exId!) ?? false;
-      items.push({
-        itemGroupPosition: position++,
-        workoutMode: mapping.defaults.workout_mode,
-        handMode: oneArm ? 1 : 2,
-        actionId,
-        actionModeConfig: {},
-        // A one-arm movement can't be sent as bilateral (direction 0): each set
-        // becomes one per side, alternating.
-        itemDetails: oneArm
-          ? Array.from({ length: sets * 2 }, (_, i) => ({
-              position: i + 1,
-              repCount: reps,
-              restTime: mapping.defaults.rest_sec,
-              tag: mapping.defaults.tag,
-              modeConfig: { baseValue: load, direction: (i % 2) + 1 as 1 | 2 },
-            }))
-          : Array.from({ length: sets }, (_, i) => ({
-              position: i + 1,
-              repCount: reps,
-              restTime: mapping.defaults.rest_sec,
-              tag: mapping.defaults.tag,
-              modeConfig: { baseValue: load, direction: 0 },
-            })),
-      });
+      items.push(
+        sessionItem({
+          position: position++,
+          actionId,
+          lb: load,
+          sets,
+          reps,
+          restSec: mapping.defaults.rest_sec,
+          oneArm: mapping.unilateral?.includes(exId!) ?? false,
+        })
+      );
     }
 
     if (!items.length) return { ok: true, action: "none", exercises: 0, skipped };
@@ -194,17 +165,23 @@ export async function pushVoltraSession(
     const before = await listSessions();
     const existing = before.sessions.find((s) => s.title === title);
 
-    let action: "created" | "updated" | "kept" = "created";
+    let action: "created" | "updated" = "created";
     let reply: unknown;
     if (existing) {
       try {
         reply = await updateSession(existing.id, payload);
         action = "updated";
       } catch (err) {
-        // Today's session is already on the device: use it as it is, and say the
-        // refresh didn't happen.
-        console.warn(`voltra session update failed; keeping "${title}"`, err);
-        return { ok: true, title, action: "kept", exercises: items.length, skipped, guessedLoads, note: `couldn't update it (${publicMessage(err)})` };
+        // The session there may be stale or empty, so this is a failure, with the
+        // one-step way out.
+        console.warn(`voltra session update failed for "${title}"`, err);
+        return {
+          ok: false,
+          title,
+          skipped,
+          guessedLoads,
+          error: `couldn't update "${title}" (${publicMessage(err)}). Delete it in Beyond+ and tap Start again`,
+        };
       }
     } else {
       reply = await createSession(payload);
