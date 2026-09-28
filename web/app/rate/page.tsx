@@ -1,3 +1,4 @@
+import { requirePageAuth } from "@/lib/guard";
 import Link from "next/link";
 import { loadLibrary } from "@/lib/library";
 import RateList from "./RateList";
@@ -6,6 +7,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function RatePage() {
+  await requirePageAuth();
   let exercises, error: string | null = null;
   try {
     ({ exercises } = await loadLibrary());

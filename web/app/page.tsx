@@ -1,3 +1,4 @@
+import { requirePageAuth } from "@/lib/guard";
 import Link from "next/link";
 import { loadDay } from "@/lib/brief";
 import { GitHubError, tokenExpiry } from "@/lib/github";
@@ -40,6 +41,7 @@ function explain(err: unknown): { title: string; detail: string; fix: string } {
 }
 
 export default async function Page() {
+  await requirePageAuth();
   let state: Awaited<ReturnType<typeof loadDay>> | null = null;
   let failure: { title: string; detail: string; fix: string } | null = null;
   try {

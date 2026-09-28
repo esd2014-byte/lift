@@ -150,7 +150,7 @@
 
   /* ---- body inputs ------------------------------------------------ */
   .field { display: flex; gap: 8px; align-items: center; }
-  input[type="number"], input[type="text"] {
+  input[type="number"], input[type="text"], input[type="password"] {
     flex: 1; min-width: 0; font: inherit; font-family: "IBM Plex Mono", monospace;
     padding: 11px 12px; border-radius: 9px; border: 1px solid var(--border-strong);
     background: var(--surface-2); color: var(--ink);

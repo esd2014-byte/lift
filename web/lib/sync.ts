@@ -1,3 +1,4 @@
+import { publicMessage } from "./errors";
 import { listWorkouts as listHevy, workoutCount } from "./hevy";
 import { listWorkouts as listVoltra } from "./voltra";
 import { writeFile } from "./github";
@@ -78,7 +79,7 @@ export async function syncHevy(why: string): Promise<SyncResult> {
     return { source: "hevy", ok: true, workouts: payload.workout_count };
   } catch (err) {
     console.error("hevy sync failed", err);
-    return { source: "hevy", ok: false, error: (err instanceof Error ? err.message : String(err)).slice(0, 300) };
+    return { source: "hevy", ok: false, error: publicMessage(err) };
   }
 }
 
@@ -122,7 +123,7 @@ export async function syncVoltra(why: string): Promise<SyncResult> {
     return { source: "voltra", ok: true, workouts: workouts.length };
   } catch (err) {
     console.error("voltra sync failed", err);
-    return { source: "voltra", ok: false, error: (err instanceof Error ? err.message : String(err)).slice(0, 300) };
+    return { source: "voltra", ok: false, error: publicMessage(err) };
   }
 }
 
