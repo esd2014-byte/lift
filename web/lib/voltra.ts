@@ -37,11 +37,44 @@ async function call(path: string, init: RequestInit = {}) {
   });
   const text = await res.text();
   if (!res.ok) throw new Error(`Voltra ${path}: ${res.status} ${text.slice(0, 300)}`);
+  if (!text) return { _status: res.status, _empty: true };
   try {
-    return text ? JSON.parse(text) : {};
+    return JSON.parse(text);
   } catch {
-    return { raw: text };
+    return { raw: text.slice(0, 300) };
   }
+}
+
+/**
+ * The first array of sessions in a reply, wherever the API put it. Replies have
+ * come back both bare and wrapped in `data`, and the key has varied; reading only
+ * one shape made a real list look empty.
+ */
+export function sessionsIn(d: unknown): Array<{ id: number; title: string }> {
+  const seen = new Set<unknown>();
+  const walk = (v: unknown, depth: number): Array<{ id: number; title: string }> | null => {
+    if (!v || typeof v !== "object" || seen.has(v) || depth > 3) return null;
+    seen.add(v);
+    if (Array.isArray(v)) {
+      return v.every((x) => x && typeof x === "object" && "title" in x) ? (v as Array<{ id: number; title: string }>) : null;
+    }
+    const o = v as Record<string, unknown>;
+    for (const k of ["workoutSessions", "sessions", "list", "records", "items", "data"]) {
+      const found = walk(o[k], depth + 1);
+      if (found) return found;
+    }
+    return null;
+  };
+  return walk(d, 0) ?? [];
+}
+
+/** Top-level shape of a reply, for logs: keys and array sizes, never values. */
+export function shapeOf(d: unknown): string {
+  if (!d || typeof d !== "object") return typeof d;
+  if (Array.isArray(d)) return `array(${d.length})`;
+  return `{${Object.entries(d as Record<string, unknown>)
+    .map(([k, v]) => (Array.isArray(v) ? `${k}:array(${v.length})` : v && typeof v === "object" ? `${k}:${shapeOf(v)}` : k))
+    .join(", ")}}`;
 }
 
 export type VoltraWorkout = {
@@ -104,9 +137,9 @@ export type SessionPayload = {
   blockList: Array<{ blockType: 1 | 2; itemList: SessionItem[] }>;
 };
 
-export async function listSessions() {
+export async function listSessions(): Promise<{ sessions: Array<{ id: number; title: string }>; shape: string }> {
   const d = await call("/workout/me/sessions/v2/");
-  return (d?.workoutSessions ?? d?.list ?? []) as Array<{ id: number; title: string }>;
+  return { sessions: sessionsIn(d), shape: shapeOf(d) };
 }
 
 export async function createSession(payload: SessionPayload) {
