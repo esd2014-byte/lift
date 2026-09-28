@@ -22,6 +22,8 @@ import type { BriefData, Row } from "./types";
 
 type Mapping = {
   actions: Record<string, number>;
+  /** Library ids of one-arm movements. The device rejects these as bilateral. */
+  unilateral?: string[];
   defaults: { workout_mode: 1 | 2 | 3 | 4; rest_sec: number; tag: 0 | 1 | 2; direction: 0 | 1 | 2 };
 };
 
@@ -113,13 +115,23 @@ export async function pushVoltraSession(
         workoutMode: mapping.defaults.workout_mode,
         actionId,
         actionModeConfig: {},
-        itemDetails: Array.from({ length: sets }, (_, i) => ({
-          position: i + 1,
-          repCount: reps,
-          restTime: mapping.defaults.rest_sec,
-          tag: mapping.defaults.tag,
-          modeConfig: { baseValue: load, direction: mapping.defaults.direction },
-        })),
+        // A one-arm movement can't be sent as bilateral (direction 0): each set
+        // becomes one per side, alternating.
+        itemDetails: mapping.unilateral?.includes(exId!)
+          ? Array.from({ length: sets * 2 }, (_, i) => ({
+              position: i + 1,
+              repCount: reps,
+              restTime: mapping.defaults.rest_sec,
+              tag: mapping.defaults.tag,
+              modeConfig: { baseValue: load, direction: (i % 2) + 1 as 1 | 2 },
+            }))
+          : Array.from({ length: sets }, (_, i) => ({
+              position: i + 1,
+              repCount: reps,
+              restTime: mapping.defaults.rest_sec,
+              tag: mapping.defaults.tag,
+              modeConfig: { baseValue: load, direction: mapping.defaults.direction },
+            })),
       });
     }
 
@@ -132,7 +144,8 @@ export async function pushVoltraSession(
     // with the variant, and older sessions were titled by date alone.
     const dateSuffix = `(${shortDate(brief.date)})`;
     const legacy = brief.date.replace(/-/g, ".");
-    const existing = (await listSessions()).find(
+    const before = await listSessions();
+    const existing = before.sessions.find(
       (s) => s.title === title || s.title.endsWith(dateSuffix) || s.title === legacy
     );
     const reply = existing ? await updateSession(existing.id, payload) : await createSession(payload);
@@ -142,9 +155,14 @@ export async function pushVoltraSession(
     // Read it back. The device API can answer a request it didn't act on with a
     // success status (a rejected payload looks like a normal reply), so the only
     // proof a session exists is finding it in the list.
-    const saved = (await listSessions()).some((s) => s.title === title);
+    const after = await listSessions();
+    const saved = after.sessions.some((s) => s.title === title);
     if (!saved) {
-      console.error(`voltra session "${title}" not found after ${existing ? "update" : "create"}`, replyText);
+      console.error(
+        `voltra session "${title}" not found after ${existing ? "update" : "create"}. ` +
+          `Reply: ${replyText}. List had ${after.sessions.length} session(s) ` +
+          `[${after.sessions.slice(0, 5).map((s) => s.title).join(" | ")}], shape ${after.shape}`
+      );
       return {
         ok: false,
         title,
