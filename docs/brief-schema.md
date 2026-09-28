@@ -46,8 +46,12 @@ A row:
 
 The number, in pounds, that should be programmed on the device. It is **mandatory for
 any Voltra exercise** because the daily Beyond+ session is generated from it: a missing
-`load_lb` means the session gets a placeholder weight, which Eli then has to fix on the
-device — exactly the manual step this is supposed to remove.
+`load_lb` makes the app guess one (`lib/loadGuess.ts`): from the last time that lift
+was done on the Voltra or logged in Hevy, else a related lift scaled by
+`estimate_from` in `scripts/voltra_mapping.yaml`, else the note, else a light 30 lb.
+The guess rounds down to 5 lb, and the row is shown as a **calibration** row: the
+weight is a starting point to adjust after set 1, and the rep range and RPE are the
+real target. A guess is a fallback, not a substitute: the brief should still set it.
 
 Rules:
 - Take it from `history/baseline.yaml` or the last logged set for that exercise.

@@ -4,6 +4,7 @@ import { rollingAverage } from "./bodyweight";
 import { parseDayNames } from "./program";
 import { checkBrief } from "./briefCheck";
 import { parseLog, type WorkoutEntry } from "./workouts";
+import { fillLoads, guessInputs, GUESS_PATHS } from "./loadGuess";
 import type { BriefData } from "./types";
 import type { DigestSession, VoltraSession } from "./metrics";
 
@@ -77,6 +78,7 @@ export async function loadDay(): Promise<DayState> {
       "logs/rest-days.json",
       "program/current.yaml",
       "logs/workouts.json",
+      ...GUESS_PATHS,
     ],
     ["logs/photos"]
   );
@@ -96,7 +98,8 @@ export async function loadDay(): Promise<DayState> {
   const briefMarkdown = briefDate ? files[`logs/briefs/${briefDate}.md`] : null;
   // Model-written: checked and bounded before anything renders or pushes it.
   const checked = briefDate ? checkBrief(parseJson<unknown>(files[`logs/briefs/${briefDate}.json`])) : null;
-  const briefData = checked?.brief ?? null;
+  // Voltra rows without a load get a calibration guess from lift history.
+  const briefData = checked?.brief ? fillLoads(checked.brief, guessInputs(files)) : null;
   if (checked?.problems.length) console.warn(`brief ${briefDate}: ${checked.problems.join("; ")}`);
 
   // Bodyweight: one row per day; a skipped day is recorded as "skip" so the app

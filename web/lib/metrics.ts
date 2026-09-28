@@ -56,6 +56,8 @@ const ANCHORS: Array<{ id: string; name: string; match: RegExp; source: "hevy" |
 export type VoltraSession = {
   date: string;
   actions: string[];
+  /** Beyond+ action ids, parallel to `actions`. Absent in digests written before 2026-09-28. */
+  action_ids?: number[];
   unnamed: boolean;
   sets: number;
   reps: number;
