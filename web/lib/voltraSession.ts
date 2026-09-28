@@ -1,6 +1,6 @@
 import { publicMessage } from "./errors";
 import { parse } from "yaml";
-import { readFile } from "./github";
+import { readFile } from "./store";
 import { createSession, updateSession, listSessions, clampLoad, sessionItem, sessionPayload, type SessionItem } from "./voltra";
 import { voltraTitle } from "./session";
 import type { BriefData, Row } from "./types";

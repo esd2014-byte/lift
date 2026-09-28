@@ -59,6 +59,8 @@ export default async function Page() {
           <div style={{ marginTop: 6 }}>{failure?.detail}</div>
           <div style={{ marginTop: 10, fontSize: ".84rem" }}>{failure?.fix}</div>
         </div>
+        {/* A full reload on purpose: it retries the whole data load from scratch. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a className="btn block" href="/" style={{ display: "block", textAlign: "center", marginTop: 12, textDecoration: "none" }}>
           Try again
         </a>

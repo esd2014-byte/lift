@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { logged } from "@/lib/log";
 import { publicMessage } from "@/lib/errors";
 import { requireAuth } from "@/lib/guard";
-import { readFile, updateFile } from "@/lib/github";
+import { readFile, updateFile } from "@/lib/store";
 import { todayISO } from "@/lib/date";
 import { parseDayNames } from "@/lib/program";
 import { dayTitle } from "@/lib/session";
@@ -13,6 +13,7 @@ import { closeUnended, end, parseLog, start, type WorkoutEntry } from "@/lib/wor
 import { VARIANT_ORDER } from "@/lib/types";
 import { checkBrief } from "@/lib/briefCheck";
 import { withGuessedLoads } from "@/lib/loadGuess";
+import { upsertJsonDay } from "@/lib/dailyLog";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -63,20 +64,7 @@ async function handlePOST(req: NextRequest) {
       await Promise.all([
         updateFile(LOG, (cur) => json(start(parseLog(cur), entry)), `Workout started ${today}: ${variant}`),
         // The committed choice, in the file the coach already reads.
-        updateFile(
-          VARIANTS,
-          (cur) => {
-            let variants: Array<{ date: string; variant: string; at: string }> = [];
-            try {
-              variants = JSON.parse(cur ?? "[]");
-            } catch {}
-            variants = variants.filter((r) => r.date !== today);
-            variants.push({ date: today, variant, at: now });
-            variants.sort((a, b) => (a.date < b.date ? -1 : 1));
-            return JSON.stringify(variants, null, 2) + "\n";
-          },
-          `Variant ${today}: ${variant}`
-        ),
+        updateFile(VARIANTS, (cur) => upsertJsonDay(cur, { date: today, variant, at: now }), `Variant ${today}: ${variant}`),
       ]);
 
       const [hevy, voltra] = await Promise.all([

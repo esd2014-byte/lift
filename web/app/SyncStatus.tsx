@@ -27,6 +27,9 @@ export default function SyncStatus({
   hevySyncedAt,
   voltraSyncedAt,
   tokenExpiresAt = null,
+  // A server component: it renders once per request, so reading the clock here is
+  // right. The purity rule is about client components that re-render.
+  // eslint-disable-next-line react-hooks/purity
   now = Date.now(),
 }: {
   hevySyncedAt: string | null;

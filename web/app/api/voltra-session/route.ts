@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logged } from "@/lib/log";
 import { requireAuth } from "@/lib/guard";
-import { readFile } from "@/lib/github";
+import { readFile } from "@/lib/store";
 import { todayISO } from "@/lib/date";
 import { pushVoltraSession } from "@/lib/voltraSession";
 import { checkBrief } from "@/lib/briefCheck";

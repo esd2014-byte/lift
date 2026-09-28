@@ -1,7 +1,7 @@
 import { publicMessage } from "./errors";
 import { listWorkouts as listHevy, workoutCount } from "./hevy";
 import { listWorkouts as listVoltra } from "./voltra";
-import { writeFile } from "./github";
+import { writeFile } from "./store";
 import { localDateOf, todayISO } from "./date";
 
 /**

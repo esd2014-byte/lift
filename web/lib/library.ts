@@ -1,5 +1,5 @@
 import { parse } from "yaml";
-import { readFile } from "./github";
+import { readFile } from "./store";
 import { TOLERANCES, type Tolerance } from "./tolerance";
 
 export type Exercise = {

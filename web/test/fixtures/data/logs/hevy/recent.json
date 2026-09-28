@@ -1,0 +1,18 @@
+{
+  "synced_at": "2030-01-05T20:00:00.000Z",
+  "local_date": "2030-01-05",
+  "workout_count": 3,
+  "last_session": "2030-01-05",
+  "sessions": [
+    {"date": "2030-01-05", "start": "2030-01-05T18:00:00+00:00", "minutes": 50, "title": "Day A — Push",
+     "exercises": [
+       {"name": "Bench Press (Dumbbell)", "sets": 4, "top": {"lb": 60, "reps": 10, "rpe": null, "seconds": null}},
+       {"name": "Triceps Rope Pushdown", "sets": 3, "top": {"lb": 40, "reps": 12, "rpe": null, "seconds": null}}]},
+    {"date": "2030-01-03", "start": "2030-01-03T18:00:00+00:00", "minutes": 45, "title": "Day B — Pull",
+     "exercises": [
+       {"name": "Dumbbell Row", "sets": 3, "top": {"lb": 55, "reps": 10, "rpe": null, "seconds": null}}]},
+    {"date": "2030-01-01", "start": "2030-01-01T18:00:00+00:00", "minutes": 48, "title": "Day A — Push",
+     "exercises": [
+       {"name": "Bench Press (Dumbbell)", "sets": 4, "top": {"lb": 55, "reps": 10, "rpe": null, "seconds": null}}]}
+  ]
+}
