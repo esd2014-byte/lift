@@ -16,6 +16,7 @@ import InjuryNotes from "./InjuryNotes";
 import Body from "./Body";
 import Today from "./Today";
 import Coaching from "./Coaching";
+import { workoutDay } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -153,7 +154,12 @@ export default async function Page() {
           {
             id: "coaching",
             label: "Coaching",
-            content: <Coaching html={parts ? renderMarkdown(parts.coaching) : ""} />,
+            content: (
+              <Coaching
+                html={parts ? renderMarkdown(parts.coaching) : ""}
+                workoutDay={state.briefData ? workoutDay(state.briefData, state.dayNames) : null}
+              />
+            ),
           },
           {
             id: "injury",

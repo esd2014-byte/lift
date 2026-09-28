@@ -4,14 +4,15 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BriefData, Variant } from "@/lib/types";
 import type { WorkoutEntry } from "@/lib/workouts";
-import { dayTitle, hevyTitle, isVoltraRow, voltraTitle } from "@/lib/session";
+import { dayTitle, hevyTitle, isVoltraRow, variantName, voltraTitle } from "@/lib/session";
 
 const ORDER = ["full", "beast", "minimum", "travel"] as const;
-const META: Record<string, { label: string; fallback: string }> = {
-  full: { label: "Full", fallback: "as programmed" },
-  beast: { label: "Beast mode", fallback: "bigger than planned" },
-  minimum: { label: "Minimum", fallback: "the one that counts" },
-  travel: { label: "Traveling", fallback: "hotel or no kit" },
+/** What each variant means, when the brief doesn't say. */
+const FALLBACK_META: Record<string, string> = {
+  full: "the workout day as written",
+  beast: "more than planned",
+  minimum: "the one thing that counts",
+  travel: "hotel gym or no kit",
 };
 
 type Push = { ok: boolean; title?: string; action?: string; error?: string; skipped?: string[]; note?: string };
@@ -90,8 +91,6 @@ export default function Today({
   const day = dayTitle(data, v, dayNames);
   // The card shows the brief's own name for the day ("Push + Day F finisher") unless
   // the variant trains a different day; the apps get the program's routine name.
-  const cardTitle =
-    day === `Day ${data.day} — ${dayNames[data.day] ?? data.day_name}` ? `Day ${data.day} — ${data.day_name}` : day;
   const hasLoads = (v?.rows ?? []).some((r) => typeof r.load_lb === "number");
   const calibrating = (v?.rows ?? []).filter((r) => r.calibration).length;
   const voltraRows = (v?.rows ?? []).filter(isVoltraRow).length;
@@ -216,16 +215,16 @@ export default function Today({
       )}
 
       <div className="card">
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          <span className={`pill ${data.day_type === "short" ? "accent" : "ok"}`}>
-            {data.day_type === "short" ? "Short day" : "Real day"}
-          </span>
-          {stale && <span className="pill due">{weekday(data.date)}&apos;s plan</span>}
-        </div>
-        <p className="session-title">{cardTitle}</p>
+        {(data.day_type === "short" || stale) && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+            {data.day_type === "short" && <span className="pill accent">Short day</span>}
+            {stale && <span className="pill due">{weekday(data.date)}&apos;s plan</span>}
+          </div>
+        )}
+        <p className="session-title">{day}</p>
         <p className="variant-line">
-          <b>{v?.label ?? META[active]?.label}</b>
-          {v?.duration && <> · {v.duration}</>}
+          <b>{restOpen ? variantName("rest") : variantName(active)}</b>
+          {!restOpen && v?.duration && <> · {v.duration}</>}
         </p>
         {stale ? (
           <p className="sub">
@@ -242,12 +241,9 @@ export default function Today({
       {!isRunning && phase !== "ended" && (
         <details className="adjust">
           <summary>
-            Need to adjust?
-            {active !== keys[0] && !restOpen && (
-              <span className="pill accent" style={{ marginLeft: 8 }}>
-                {data.variants[active]?.label ?? active}
-              </span>
-            )}
+            <span>Variant</span>
+            <span className="current">{restOpen ? variantName("rest") : variantName(active)}</span>
+            <span className="change">Change</span>
           </summary>
           <div className="variants" style={{ marginTop: 11 }}>
             {keys.map((k) => {
@@ -260,14 +256,14 @@ export default function Today({
                   aria-pressed={!restOpen && active === k}
                   onClick={() => pick(k)}
                 >
-                  <span className="vname">{vv.label ?? META[k].label}</span>
-                  <span className="vmeta">{vv.meta ?? META[k].fallback}</span>
+                  <span className="vname">{variantName(k)}</span>
+                  <span className="vmeta">{vv.meta || FALLBACK_META[k]}</span>
                 </button>
               );
             })}
             <button className="variant" data-v="rest" aria-pressed={restOpen} onClick={() => setRestOpen(true)}>
-              <span className="vname">Can&apos;t train</span>
-              <span className="vmeta">tell me why</span>
+              <span className="vname">{variantName("rest")}</span>
+              <span className="vmeta">can&apos;t train today: tell me why</span>
             </button>
           </div>
 

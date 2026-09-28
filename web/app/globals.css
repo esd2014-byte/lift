@@ -108,6 +108,12 @@ h1 {
   letter-spacing: -0.02em;
   line-height: 1.15;
 }
+.eyebrow .plan {
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.85rem;
+}
 .eyebrow {
   font-family: Archivo, system-ui, sans-serif;
   font-size: 0.7rem;
@@ -447,7 +453,7 @@ a.btn.block {
   border-color: var(--accent);
 }
 .variant[data-v="beast"] .vname::after {
-  content: "▲";
+  content: "▲" / "";
   font-size: 0.6em;
   margin-left: 5px;
   color: var(--accent);
@@ -656,6 +662,9 @@ textarea.reason {
       border-color 0.12s ease,
       color 0.12s ease;
   }
+  details.adjust > summary::after {
+    transition: transform 0.15s ease;
+  }
 }
 
 /* app-only additions */
@@ -746,23 +755,31 @@ details.adjust > summary {
   cursor: pointer;
   list-style: none;
   font-family: Archivo, system-ui, sans-serif;
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--muted);
-  padding: 10px 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--ink-2);
+  min-height: 48px;
+  padding: 8px 0;
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+details.adjust > summary .current {
+  font-weight: 700;
+  color: var(--ink);
+}
+details.adjust > summary .change {
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 600;
 }
 details.adjust > summary::-webkit-details-marker {
   display: none;
 }
 details.adjust > summary::after {
-  content: "▾";
-  margin-left: auto;
+  content: "▾" / "";
   font-size: 0.9rem;
-  transition: transform 0.15s ease;
+  color: var(--accent);
 }
 details.adjust[open] > summary::after {
   transform: rotate(180deg);
