@@ -4,6 +4,7 @@ import { readFile } from "@/lib/github";
 import { todayISO } from "@/lib/date";
 import { pushVoltraSession } from "@/lib/voltraSession";
 import { checkBrief } from "@/lib/briefCheck";
+import { withGuessedLoads } from "@/lib/loadGuess";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -20,7 +21,8 @@ export async function POST(req: NextRequest) {
   const day = date ?? todayISO();
   const briefRaw = await readFile(`logs/briefs/${day}.json`);
   if (!briefRaw) return NextResponse.json({ error: `no brief for ${day}` }, { status: 404 });
-  const { brief } = checkBrief(JSON.parse(briefRaw));
+  const { brief: checked } = checkBrief(JSON.parse(briefRaw));
+  const brief = checked ? await withGuessedLoads(checked) : null;
   if (!brief) return NextResponse.json({ error: `the brief for ${day} couldn't be read` }, { status: 422 });
   const result = await pushVoltraSession(brief, variant);
   return NextResponse.json(result, { status: result.ok ? 200 : 500 });

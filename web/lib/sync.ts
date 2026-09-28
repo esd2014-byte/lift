@@ -95,6 +95,9 @@ export async function syncVoltra(why: string): Promise<SyncResult> {
       // "Free Exercises" means nothing was selected on the device, so the movement
       // is unknown. Flag it rather than guessing from the force profile.
       actions: w.actionNames ?? [],
+      // Ids too: they're what scripts/voltra_mapping.yaml speaks, so a lift's history
+      // can be found without matching names.
+      action_ids: w.actionIds ?? [],
       unnamed: !w.actionNames?.length || w.actionNames.every((n) => /free exercise/i.test(n)),
       sets: w.setCount,
       reps: w.repCount,

@@ -11,6 +11,7 @@ import { syncAll } from "@/lib/sync";
 import { closeUnended, end, parseLog, start, type WorkoutEntry } from "@/lib/workouts";
 import { VARIANT_ORDER } from "@/lib/types";
 import { checkBrief } from "@/lib/briefCheck";
+import { withGuessedLoads } from "@/lib/loadGuess";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -49,7 +50,8 @@ export async function POST(req: NextRequest) {
         readFile("program/current.yaml"),
       ]);
       if (!briefRaw) return NextResponse.json({ error: `no brief for ${date}` }, { status: 404 });
-      const { brief } = checkBrief(JSON.parse(briefRaw));
+      const { brief: checked } = checkBrief(JSON.parse(briefRaw));
+      const brief = checked ? await withGuessedLoads(checked) : null;
       if (!brief) return NextResponse.json({ error: `the brief for ${date} couldn't be read` }, { status: 422 });
       if (!brief.variants?.[variant]) return NextResponse.json({ error: "variant not in brief" }, { status: 400 });
       const dayNames = parseDayNames(programRaw);

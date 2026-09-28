@@ -93,6 +93,7 @@ export default function Today({
   const cardTitle =
     day === `Day ${data.day} — ${dayNames[data.day] ?? data.day_name}` ? `Day ${data.day} — ${data.day_name}` : day;
   const hasLoads = (v?.rows ?? []).some((r) => typeof r.load_lb === "number");
+  const calibrating = (v?.rows ?? []).filter((r) => r.calibration).length;
   const voltraRows = (v?.rows ?? []).filter(isVoltraRow).length;
   const hevyRows = (v?.rows ?? []).length - voltraRows;
   const hevyName = hevyTitle(day, active, v);
@@ -387,6 +388,13 @@ export default function Today({
               {v.note.text}
             </div>
           )}
+          {calibrating > 0 && (
+            <div className="callout warn" style={{ marginTop: 10 }}>
+              <b>Calibration day for {calibrating === 1 ? "one Voltra lift" : `${calibrating} Voltra lifts`}.</b> The brief
+              didn&apos;t set {calibrating === 1 ? "its weight" : "their weights"}, so Lift guessed from your history. Each is
+              marked below: treat set 1 as a feeler, adjust, and log what you finish on.
+            </div>
+          )}
           <p className="handoff">
             {hevyRows > 0 && voltraRows > 0 ? (
               <>
@@ -418,8 +426,20 @@ export default function Today({
                         <span className={`where ${isVoltraRow(r) ? "where-voltra" : "where-hevy"}`}>{isVoltraRow(r) ? "Voltra" : "Hevy"}</span>
                         {r.station && <> · {r.station}</>}
                       </div>
+                      {r.calibration && (
+                        <div className="calib">
+                          <b>Calibration:</b> {r.load_lb} lb is a guess ({r.calibration.basis}). Target {r.calibration.reps}{" "}
+                          at RPE {r.calibration.rpe}. After set 1, go up 5–10 lb if it felt easier than RPE{" "}
+                          {r.calibration.rpe}, down if harder.
+                        </div>
+                      )}
                     </td>
-                    {hasLoads && <td className="repcell">{typeof r.load_lb === "number" ? `${r.load_lb} lb` : "—"}</td>}
+                    {hasLoads && (
+                      <td className="repcell">
+                        {typeof r.load_lb === "number" ? `${r.load_lb} lb` : "—"}
+                        {r.calibration && <div className="guess">guess</div>}
+                      </td>
+                    )}
                     <td className="repcell">{r.reps}</td>
                     <td className="repcell">{r.rpe ?? "—"}</td>
                   </tr>

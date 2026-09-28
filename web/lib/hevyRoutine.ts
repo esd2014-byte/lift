@@ -51,7 +51,8 @@ function exerciseNote(row: Row): string {
   const parts: string[] = [];
   if (row.rpe !== undefined && row.rpe !== null && row.rpe !== "") parts.push(`RPE ${row.rpe}`);
   parts.push(row.reps);
-  if (typeof row.load_lb === "number") parts.push(`target ${row.load_lb} lb`);
+  if (row.calibration) parts.push(`CALIBRATION: ${row.load_lb} lb is a guess, adjust after set 1`);
+  else if (typeof row.load_lb === "number") parts.push(`target ${row.load_lb} lb`);
   const note = cleanNote(row.note);
   if (note) parts.push(note);
   return parts.join(" · ");

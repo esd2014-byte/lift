@@ -9,6 +9,11 @@ export type Row = {
   /** Pounds to program on the device. Required on Voltra rows - see docs/brief-schema.md. */
   load_lb?: number | null;
   note?: string;
+  /**
+   * Set by the app, never by the brief: this row's load_lb was a guess (see
+   * lib/loadGuess.ts), so today is a calibration day for it.
+   */
+  calibration?: import("./loadGuess").Calibration;
 };
 
 export type Variant = {
