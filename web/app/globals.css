@@ -416,6 +416,7 @@ details.guide summary {
 
 /* ---- today's pumps ---------------------------------------------- */
 .session-title {
+  margin: 0;
   font-family: var(--font-display), system-ui, sans-serif;
   font-size: 1.15rem;
   font-weight: 700;
