@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logged } from "@/lib/log";
 import { publicMessage } from "@/lib/errors";
 import { requireAuth } from "@/lib/guard";
 import { writeBinaryFile } from "@/lib/github";
@@ -15,7 +16,7 @@ export const maxDuration = 30;
  * weekly photos to roughly 10MB - small enough that the repo stays the single
  * place everything lives, with no extra storage service to run.
  */
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const denied = requireAuth(req);
   if (denied) return denied;
   try {
@@ -39,3 +40,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: publicMessage(err) }, { status: 500 });
   }
 }
+
+export const POST = logged("photo", handlePOST);

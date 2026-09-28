@@ -14,6 +14,7 @@
  *     its change when another write got there first.
  */
 
+import { log } from "./log";
 import { dataRepo } from "./config";
 
 const TIMEOUT_MS = 10_000;
@@ -224,7 +225,7 @@ export async function updateFile(
   path: string,
   change: (current: string | null) => string | null,
   message: string
-): Promise<{ changed: boolean }> {
+): Promise<{ changed: boolean; sha?: string }> {
   for (let attempt = 1; ; attempt++) {
     const res = await gh(withRef(path));
     let current: string | null = null;
@@ -245,7 +246,12 @@ export async function updateFile(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message, content: Buffer.from(next, "utf8").toString("base64"), sha, branch: dataRepo().branch }),
     });
-    if (put.ok) return { changed: true };
+    if (put.ok) {
+      // Which data commit this write made: the durable link from a log line to the repo.
+      const sha = ((await put.json().catch(() => null)) as { commit?: { sha?: string } } | null)?.commit?.sha?.slice(0, 7);
+      log("data.write", { path, sha, attempt });
+      return { changed: true, sha };
+    }
     const err = await failure(put, `write ${path}`);
     if (err.kind !== "conflict" || attempt >= ATTEMPTS) throw err;
     await sleep(150 * attempt + Math.random() * 150);
@@ -268,5 +274,7 @@ export async function writeBinaryFile(path: string, base64: string, message: str
     body: JSON.stringify({ message, content: base64, branch: dataRepo().branch }),
   });
   if (!res.ok) throw await failure(res, `write ${path}`);
-  return res.json();
+  const json = await res.json();
+  log("data.write", { path, sha: (json as { commit?: { sha?: string } })?.commit?.sha?.slice(0, 7), attempt: 1 });
+  return json;
 }

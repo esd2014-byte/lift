@@ -160,7 +160,7 @@ def build_routine(day_id, day, lib, tmpl, notes_map):
     (tested 2026-09-26), so there's no "present but untickable" option either.
 
     The running order lives in the Lift app, which shows the whole session including
-    Voltra. Hevy only carries what Eli actually ticks.
+    Voltra. Hevy only carries what the athlete actually ticks.
     """
     exercises = [{
         "exercise_template_id": tmpl["warmup"],

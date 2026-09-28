@@ -1,3 +1,5 @@
+import { ZONE } from "@/lib/date";
+
 /**
  * Only speaks up when a feed has stopped. A sync that quietly fails still leaves a
  * plausible-looking brief behind, built on stale data - which is the one failure
@@ -13,7 +15,7 @@ function describe(name: string, at: string | null, now: number) {
     weekday: "short",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "America/New_York",
+    timeZone: ZONE,
   });
   return `${name} last synced ${when}.`;
 }

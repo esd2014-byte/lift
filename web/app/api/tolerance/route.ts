@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logged } from "@/lib/log";
 import { publicMessage } from "@/lib/errors";
 import { requireAuth } from "@/lib/guard";
 import { updateFile } from "@/lib/github";
@@ -14,7 +15,7 @@ const LIBRARY_PATH = "library/exercises.yaml";
  * Batched on purpose: rating eight exercises after a session should be one commit,
  * not eight. The client accumulates and posts once.
  */
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const denied = requireAuth(req);
   if (denied) return denied;
   try {
@@ -53,3 +54,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: publicMessage(err) }, { status: 500 });
   }
 }
+
+export const POST = logged("tolerance", handlePOST);

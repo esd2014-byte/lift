@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logged } from "@/lib/log";
 import { requireAuth } from "@/lib/guard";
 import { readFile } from "@/lib/github";
 import { todayISO } from "@/lib/date";
@@ -14,7 +15,7 @@ export const maxDuration = 60;
  * this automatically; this route is the manual path. The logic is in
  * lib/voltraSession.ts.
  */
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const denied = requireAuth(req);
   if (denied) return denied;
   const { variant = "full", date } = (await req.json().catch(() => ({}))) as { variant?: string; date?: string };
@@ -27,3 +28,5 @@ export async function POST(req: NextRequest) {
   const result = await pushVoltraSession(brief, variant);
   return NextResponse.json(result, { status: result.ok ? 200 : 500 });
 }
+
+export const POST = logged("voltra-session", handlePOST);

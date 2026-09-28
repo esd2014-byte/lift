@@ -4,7 +4,7 @@ import { loadDay } from "@/lib/brief";
 import { GitHubError, tokenExpiry } from "@/lib/github";
 import { computeMetrics, mergeSources } from "@/lib/metrics";
 import { trainedDates } from "@/lib/workouts";
-import { prettyDate } from "@/lib/date";
+import { prettyDate, ZONE } from "@/lib/date";
 import { renderMarkdown, splitBrief } from "@/lib/markdown";
 import Freshness from "./Freshness";
 import SyncStatus from "./SyncStatus";
@@ -107,7 +107,7 @@ export default async function Page() {
       <header className="top">
         <Motivation date={state.today} />
         <p className="date">{prettyDate(state.today).replace(/, \d{4}$/, "")}</p>
-        <Freshness stale={state.stale} briefDate={state.briefDate} generatedAt={state.generatedAt} />
+        <Freshness zone={ZONE} stale={state.stale} briefDate={state.briefDate} generatedAt={state.generatedAt} />
         <SyncStatus hevySyncedAt={state.hevySyncedAt} voltraSyncedAt={state.voltraSyncedAt} tokenExpiresAt={tokenExpiry()?.date ?? null} />
         <WeekStrip m={metrics} />
       </header>

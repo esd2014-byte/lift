@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logged } from "@/lib/log";
 import { issueSession, sameSecret, sessionCookie } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic";
  * the secret never appears in a URL (and so never in history, referrers or the
  * request log - which is where the old ?k= link put it).
  */
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const key = process.env.APP_SECRET?.trim();
   const form = await req.formData().catch(() => null);
   const given = String(form?.get("secret") ?? "");
@@ -22,3 +23,5 @@ export async function POST(req: NextRequest) {
   res.cookies.set(sessionCookie(issueSession()));
   return res;
 }
+
+export const POST = logged("login", handlePOST);

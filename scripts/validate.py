@@ -105,7 +105,7 @@ def main():
                 errors.append(f"Library: '{ex_id}' is marked forbidden but still present")
         break
 
-    # 8. How much of the library has Eli actually rated?
+    # 8. How much of the library has the athlete actually rated?
     untested = [i for i, e in lib.items() if e.get("tolerance") == "untested"]
 
     print(f"{len(lib)} exercises, {len(program['days'])} days\n")
@@ -118,7 +118,7 @@ def main():
 
     print(f"\ntolerance: {len(lib) - len(untested)}/{len(lib)} rated, {len(untested)} untested")
     if not load("library/exercises.yaml")["meta"]["tolerance_reviewed_by_eli"]:
-        print("  -> library/exercises.yaml still needs Eli's review")
+        print("  -> library/exercises.yaml still needs the athlete's review")
 
     return 1 if errors else 0
 

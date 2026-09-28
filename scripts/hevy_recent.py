@@ -2,7 +2,7 @@
 """Show recent Hevy sessions with top sets, for calibrating prescriptions.
 
 The API is reachable directly from the assistant's environment (this was NOT true
-when the old workflow was written - it assumed Eli had to run snapshots himself and
+when the old workflow was written - it assumed the athlete had to run snapshots by hand and
 paste the output). That removes the manual snapshot step entirely.
 
 Usage: python3 scripts/hevy_recent.py [since YYYY-MM-DD]

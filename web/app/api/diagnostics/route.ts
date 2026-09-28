@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logged } from "@/lib/log";
 import { readMany, tokenExpiry } from "@/lib/github";
-import { todayISO } from "@/lib/date";
+import { todayISO, ZONE } from "@/lib/date";
 import { requireAuth } from "@/lib/guard";
 import { verifySession, SESSION_COOKIE } from "@/lib/auth";
 import { publicMessage } from "@/lib/errors";
@@ -21,7 +22,7 @@ type Check = { group: string; label: string; status: Status; value: string };
  *
  * A readable page by default; `?format=json` for the raw checks.
  */
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const denied = requireAuth(req);
   if (denied) return denied;
 
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
 }
 
 const localTime = (iso: string) =>
-  new Date(iso).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" });
+  new Date(iso).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: ZONE });
 
 async function run(req: NextRequest): Promise<Check[]> {
   const today = todayISO();
@@ -178,3 +179,5 @@ a{color:inherit}.foot{color:var(--muted);font-size:.85rem;margin-top:18px}
 <p class="foot"><a href="/">Back to Lift</a> · <a href="?format=json">JSON</a></p>
 </main></body></html>`;
 }
+
+export const GET = logged("diagnostics", handleGET);

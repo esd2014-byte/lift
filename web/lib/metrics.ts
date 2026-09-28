@@ -5,7 +5,7 @@ import type { Workout } from "./hevy";
  *
  * Deliberately computed from logged sessions rather than stored: a stored counter
  * drifts from reality the moment anything is logged or deleted in Hevy, and the
- * whole point of this number is that Eli trusts it.
+ * whole point of this number is that the athlete trusts it.
  */
 
 export type AnchorProgress = {
@@ -46,7 +46,7 @@ const WEEKLY_TARGET = 6;
 // regression that never happened.
 const ANCHORS: Array<{ id: string; name: string; match: RegExp; source: "hevy" | "voltra" }> = [
   // Anchor swapped 2026-09-25: a single Voltra can't drive a two-handed press well,
-  // and Eli rated that lift disliked. DB flat bench has real history behind it.
+  // and that lift was rated disliked. DB flat bench has real history behind it.
   { id: "flat_press", name: "DB Flat Bench", match: /^bench press \(dumbbell\)$/i, source: "hevy" },
   { id: "belt_squat", name: "Voltra Belt Squat", match: /^voltra belt squat$/i, source: "voltra" },
   { id: "deadlift", name: "Voltra Deadlift", match: /^voltra deadlift( harness)?$/i, source: "voltra" },
@@ -71,7 +71,7 @@ export type VoltraSession = {
  * rather than a number typed after the fact, which is the point.
  *
  * "Free Exercises" names no movement, so it carries no exercises and can't feed a
- * strength number - but it is still a day Eli trained, so it counts toward the streak.
+ * strength number - but it is still a training day, so it counts toward the streak.
  */
 export function mergeSources(
   hevy: DigestSession[],

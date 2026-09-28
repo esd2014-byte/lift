@@ -2,7 +2,7 @@
  * Beyond Power (Voltra) API client.
  *
  * Talks to the same HTTPS API the `voltra` CLI wraps, so none of this depends on
- * Eli's Mac being awake. Endpoints and the auth scheme were confirmed directly
+ * a laptop being awake. Endpoints and the auth scheme were confirmed directly
  * against the API (Authorization: Bearer -> 200; x-api-key and api-key -> 401).
  *
  * The device is the source of truth for anything it measures. Beyond+ captures
@@ -100,17 +100,6 @@ export type VoltraWorkout = {
 export async function listWorkouts(): Promise<VoltraWorkout[]> {
   const d = await call("/workout/list");
   return (d?.list ?? d?.data?.list ?? []) as VoltraWorkout[];
-}
-
-export type VoltraAction = { id: number; name: string };
-
-export async function listActions(): Promise<VoltraAction[]> {
-  const d = await call("/workout/me/actions");
-  const items = d?.list ?? d?.data?.list ?? d?.actions ?? [];
-  return (items as Array<Record<string, unknown>>).map((a) => ({
-    id: Number(a.id),
-    name: String(a.name ?? a.actionName ?? ""),
-  }));
 }
 
 // ---- session templates (the daily plan pushed to the device) --------------

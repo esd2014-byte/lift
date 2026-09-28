@@ -1,11 +1,28 @@
 /**
- * Everything in this app is anchored to Eli's local day, not UTC.
+ * Everything in this app is anchored to the athlete's local day, not UTC.
  *
  * This matters more than it looks: the cloud routine's cron is UTC-only, so in
  * winter the brief is generated at 6am local rather than 7am. The app must still
- * agree with him about what "today" is, wherever he happens to be training.
+ * agree with the athlete about what "today" is.
+ *
+ * The zone is APP_TIMEZONE (an IANA name, e.g. "Europe/London"), so travelling means
+ * changing one setting, not the code. Unset or invalid falls back to New York.
  */
-const ZONE = "America/New_York";
+const DEFAULT_ZONE = "America/New_York";
+
+function resolveZone(): string {
+  const z = process.env.APP_TIMEZONE?.trim();
+  if (!z) return DEFAULT_ZONE;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: z });
+    return z;
+  } catch {
+    console.warn(`APP_TIMEZONE "${z}" isn't a time zone; using ${DEFAULT_ZONE}`);
+    return DEFAULT_ZONE;
+  }
+}
+
+export const ZONE = resolveZone();
 
 export function todayISO(zone: string = ZONE): string {
   // en-CA gives YYYY-MM-DD directly.
