@@ -150,7 +150,7 @@ export function guessRow(row: Row, input: GuessInputs): Calibration | null {
         ...base,
         lb: floor5(carryOver(theirs.lb, theirs.reps, hi, rir) * rel.ratio),
         source: "related",
-        basis: `no history for this one; ${Math.round(rel.ratio * 100)}% of your ${theirs.title} (${theirs.lb} lb × ${theirs.reps} on ${theirs.date})`,
+        basis: `no history for this one; ${Math.round(rel.ratio * 100)}% of your ${theirs.title}: ${theirs.lb} lb × ${theirs.reps} on ${theirs.date}`,
       };
     }
   }

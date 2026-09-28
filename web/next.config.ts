@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // No floating dev badge: it only exists in `next dev`, and it covers the UI in demo screenshots.
+  devIndicators: false,
 
   // Baseline headers on every response. The Content Security Policy is set per
   // request in proxy.ts, because it carries a fresh nonce.

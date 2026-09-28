@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "demo": "node scripts/demo-data.mjs && DATA_DIR=.demo-data DATA_READONLY=1 APP_SECRET=demo next dev -p 3100",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit -p .",

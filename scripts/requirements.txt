@@ -1,0 +1,2 @@
+# For scripts/sync_program_to_hevy.py. Install: pip install -r scripts/requirements.txt
+pyyaml==6.0.2
