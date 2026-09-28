@@ -4,6 +4,7 @@ import { todayISO } from "@/lib/date";
 import { requireAuth } from "@/lib/guard";
 import { verifySession, SESSION_COOKIE } from "@/lib/auth";
 import { publicMessage } from "@/lib/errors";
+import { probe } from "@/lib/voltra";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +115,30 @@ async function run(req: NextRequest): Promise<Check[]> {
     add("Syncs", "Hevy API", res.ok ? "ok" : "fail", res.ok ? "key works" : `HTTP ${res.status}`);
   } catch {
     add("Syncs", "Hevy API", "fail", "no answer within 8s");
+  }
+
+  // ---- Beyond+ endpoint probe (read-only, on request) ----
+  if (req.nextUrl.searchParams.get("probe") === "voltra") {
+    // Two known-good endpoints as controls, then candidates for the session list.
+    const paths = [
+      "/workout/list",
+      "/workout/me/actions",
+      "/workout/me/sessions/v2/",
+      "/workout/me/sessions/v2",
+      "/workout/me/sessions",
+      "/workout/me/session/list",
+      "/workout/sessions",
+      "/workout/session/list",
+      "/session/list",
+      "/sessions",
+      "/sessions/v2",
+    ];
+    const results = await Promise.all(paths.map(probe));
+    console.info("voltra probe", JSON.stringify(results));
+    for (const r of results) {
+      const found = r.sessions > 0;
+      add("Beyond+ probe", r.path, found ? "ok" : r.status === 200 ? "warn" : "fail", `HTTP ${r.status} · ${r.shape}${found ? ` · ${r.sessions} session(s)` : ""}`);
+    }
   }
 
   return checks;

@@ -154,3 +154,28 @@ export async function updateSession(id: number, payload: SessionPayload) {
 export function clampLoad(lb: number) {
   return Math.max(5, Math.min(230, Math.round(lb)));
 }
+
+/**
+ * Read-only: what a GET to `path` returns - status, shape (keys and array sizes,
+ * never values) and how many sessions it holds. For finding the right endpoint
+ * from /api/diagnostics?probe=voltra.
+ */
+export async function probe(path: string): Promise<{ path: string; status: number | string; shape: string; sessions: number }> {
+  try {
+    const res = await fetch(BASE + path, {
+      headers: { Authorization: `Bearer ${key()}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+    const text = await res.text();
+    let body: unknown = null;
+    try {
+      body = text ? JSON.parse(text) : null;
+    } catch {
+      body = "non-JSON";
+    }
+    return { path, status: res.status, shape: text ? shapeOf(body) : "empty", sessions: sessionsIn(body).length };
+  } catch (err) {
+    return { path, status: err instanceof Error ? err.name : "error", shape: "-", sessions: 0 };
+  }
+}
