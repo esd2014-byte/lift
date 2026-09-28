@@ -4,14 +4,19 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BriefData, Variant } from "@/lib/types";
 import type { WorkoutEntry } from "@/lib/workouts";
-import { dayTitle, hevyTitle, isVoltraRow, voltraTitle } from "@/lib/session";
+import { didntSave, postJson } from "@/lib/postJson";
+import { dayTitle, hevyTitle, isVoltraRow, variantName, voltraTitle } from "@/lib/session";
+
+/** One tap for the usual reasons; the text box is for anything else. */
+const REST_REASONS = ["Travel", "Sick", "Sore", "No time", "Family"];
 
 const ORDER = ["full", "beast", "minimum", "travel"] as const;
-const META: Record<string, { label: string; fallback: string }> = {
-  full: { label: "Full", fallback: "as programmed" },
-  beast: { label: "Beast mode", fallback: "bigger than planned" },
-  minimum: { label: "Minimum", fallback: "the one that counts" },
-  travel: { label: "Traveling", fallback: "hotel or no kit" },
+/** What each variant means, when the brief doesn't say. */
+const FALLBACK_META: Record<string, string> = {
+  full: "the workout day as written",
+  beast: "more than planned",
+  minimum: "the one thing that counts",
+  travel: "hotel gym or no kit",
 };
 
 type Push = { ok: boolean; title?: string; action?: string; error?: string; skipped?: string[]; note?: string };
@@ -62,6 +67,7 @@ export default function Today({
   const [restOpen, setRestOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [rest, setRest] = useState<"idle" | "saving" | "done" | "error">("idle");
+  const [restError, setRestError] = useState<string | null>(null);
 
   const [startedAt, setStartedAt] = useState<string | null>(runningToday?.started_at ?? null);
   const [phase, setPhase] = useState<"idle" | "starting" | "running" | "confirm-end" | "ending" | "ended">(
@@ -90,9 +96,6 @@ export default function Today({
   const day = dayTitle(data, v, dayNames);
   // The card shows the brief's own name for the day ("Push + Day F finisher") unless
   // the variant trains a different day; the apps get the program's routine name.
-  const cardTitle =
-    day === `Day ${data.day} — ${dayNames[data.day] ?? data.day_name}` ? `Day ${data.day} — ${data.day_name}` : day;
-  const hasLoads = (v?.rows ?? []).some((r) => typeof r.load_lb === "number");
   const calibrating = (v?.rows ?? []).filter((r) => r.calibration).length;
   const voltraRows = (v?.rows ?? []).filter(isVoltraRow).length;
   const hevyRows = (v?.rows ?? []).length - voltraRows;
@@ -161,17 +164,14 @@ export default function Today({
 
   async function saveRest() {
     const text = reason.trim();
-    if (!text) return;
+    if (!text) return setRestError("Pick a reason or write one.");
+    setRestError(null);
     setRest("saving");
     try {
-      const res = await fetch("/api/rest-day", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: text }),
-      });
-      if (!res.ok) throw new Error(await res.text());
+      await postJson("/api/rest-day", { reason: text });
       setRest("done");
-    } catch {
+    } catch (err) {
+      setRestError(didntSave(err));
       setRest("error");
     }
   }
@@ -216,16 +216,16 @@ export default function Today({
       )}
 
       <div className="card">
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          <span className={`pill ${data.day_type === "short" ? "accent" : "ok"}`}>
-            {data.day_type === "short" ? "Short day" : "Real day"}
-          </span>
-          {stale && <span className="pill due">{weekday(data.date)}&apos;s plan</span>}
-        </div>
-        <p className="session-title">{cardTitle}</p>
+        {(data.day_type === "short" || stale) && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+            {data.day_type === "short" && <span className="pill accent">Short day</span>}
+            {stale && <span className="pill due">{weekday(data.date)}&apos;s plan</span>}
+          </div>
+        )}
+        <p className="session-title">{day}</p>
         <p className="variant-line">
-          <b>{v?.label ?? META[active]?.label}</b>
-          {v?.duration && <> · {v.duration}</>}
+          <b>{restOpen ? variantName("rest") : variantName(active)}</b>
+          {!restOpen && v?.duration && <> · {v.duration}</>}
         </p>
         {stale ? (
           <p className="sub">
@@ -242,12 +242,9 @@ export default function Today({
       {!isRunning && phase !== "ended" && (
         <details className="adjust">
           <summary>
-            Need to adjust?
-            {active !== keys[0] && !restOpen && (
-              <span className="pill accent" style={{ marginLeft: 8 }}>
-                {data.variants[active]?.label ?? active}
-              </span>
-            )}
+            <span>Variant</span>
+            <span className="current">{restOpen ? variantName("rest") : variantName(active)}</span>
+            <span className="change">Change</span>
           </summary>
           <div className="variants" style={{ marginTop: 11 }}>
             {keys.map((k) => {
@@ -260,14 +257,14 @@ export default function Today({
                   aria-pressed={!restOpen && active === k}
                   onClick={() => pick(k)}
                 >
-                  <span className="vname">{vv.label ?? META[k].label}</span>
-                  <span className="vmeta">{vv.meta ?? META[k].fallback}</span>
+                  <span className="vname">{variantName(k)}</span>
+                  <span className="vmeta">{vv.meta || FALLBACK_META[k]}</span>
                 </button>
               );
             })}
             <button className="variant" data-v="rest" aria-pressed={restOpen} onClick={() => setRestOpen(true)}>
-              <span className="vname">Can&apos;t train</span>
-              <span className="vmeta">tell me why</span>
+              <span className="vname">{variantName("rest")}</span>
+              <span className="vmeta">can&apos;t train today: tell me why</span>
             </button>
           </div>
 
@@ -280,22 +277,35 @@ export default function Today({
               <label htmlFor="reason" className="eyebrow" style={{ margin: "12px 0 7px", display: "block" }}>
                 What&apos;s in the way?
               </label>
+              <div className="chips" role="group" aria-label="Common reasons">
+                {REST_REASONS.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    className="chip"
+                    aria-pressed={reason.trim() === r}
+                    onClick={() => setReason(r)}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
               <textarea
                 className="reason"
+                style={{ marginTop: 9 }}
                 id="reason"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Traveling all week, offsite, fully programmed dawn to dark. Back Sunday night."
               />
-              <button
-                className="btn block"
-                onClick={saveRest}
-                disabled={rest === "saving" || !reason.trim()}
-                style={{ marginTop: 11 }}
-              >
+              <button className="btn block" onClick={saveRest} disabled={rest === "saving"} style={{ marginTop: 11 }}>
                 {rest === "saving" ? "Saving…" : "Log it"}
               </button>
-              {rest === "error" && <p className="note">Didn&apos;t save. Try again.</p>}
+              {restError && (
+                <p className="note" role="alert">
+                  {restError}
+                </p>
+              )}
             </div>
           )}
 
@@ -307,6 +317,9 @@ export default function Today({
                 Today stops counting as a miss, the streak holds, and tomorrow&apos;s brief opens from what you said
                 rather than from a silent gap.
               </div>
+              <button className="btn quiet" style={{ marginTop: 10 }} onClick={() => setRest("idle")}>
+                Change the reason
+              </button>
             </div>
           )}
         </details>
@@ -457,48 +470,50 @@ export default function Today({
               <>Everything today is logged in Hevy.</>
             )}
           </p>
-          <div className="tablewrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Exercise</th>
-                  {hasLoads && <th>Load</th>}
-                  <th>Sets × reps</th>
-                  <th>RPE</th>
-                </tr>
-              </thead>
-              <tbody>
-                {v.rows.map((r, i) => (
-                  <tr key={i}>
-                    <td>
-                      {r.superset && <span className="ss">{r.superset}</span>} <span className="exname">{r.name}</span>
-                      <div className="station">
-                        <span className={`where ${isVoltraRow(r) ? "where-voltra" : "where-hevy"}`}>
-                          {isVoltraRow(r) ? "Voltra" : "Hevy"}
-                        </span>
-                        {r.station && <> · {r.station}</>}
-                      </div>
-                      {r.calibration && (
-                        <div className="calib">
-                          <b>Calibration:</b> {r.load_lb} lb is a guess ({r.calibration.basis}). Target{" "}
-                          {r.calibration.reps} at RPE {r.calibration.rpe}. After set 1, go up 5–10 lb if it felt easier
-                          than RPE {r.calibration.rpe}, down if harder.
-                        </div>
-                      )}
-                    </td>
-                    {hasLoads && (
-                      <td className="repcell">
-                        {typeof r.load_lb === "number" ? `${r.load_lb} lb` : "—"}
-                        {r.calibration && <div className="guess">guess</div>}
-                      </td>
+          {/* One card row per exercise: at 360px a four-column table squeezed the names
+              and notes into a strip. Numbers get their own line; notes run full width. */}
+          <ol className="exlist">
+            {v.rows.map((r, i) => {
+              const where = isVoltraRow(r) ? "Voltra" : "Hevy";
+              return (
+                <li key={i} className={`ex${r.superset ? " inset" : ""}`}>
+                  <div className="exhead">
+                    {r.superset && (
+                      <span className="ss" aria-label={`Superset ${r.superset}`}>
+                        {r.superset}
+                      </span>
                     )}
-                    <td className="repcell">{r.reps}</td>
-                    <td className="repcell">{r.rpe ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    <span className="exname">{r.name}</span>
+                  </div>
+                  <div className="station">
+                    <span className={`where ${where === "Voltra" ? "where-voltra" : "where-hevy"}`}>{where}</span>
+                    {r.station && <> · {r.station}</>}
+                  </div>
+                  <p className="exnums num">
+                    {typeof r.load_lb === "number" && (
+                      <>
+                        <b>{r.load_lb} lb</b>
+                        {r.calibration && <span className="guess">guess</span>}
+                        <span className="sep"> · </span>
+                      </>
+                    )}
+                    <b>{r.reps}</b>
+                    {r.rpe != null && r.rpe !== "" && (
+                      <>
+                        <span className="sep"> · </span>RPE <b>{r.rpe}</b>
+                      </>
+                    )}
+                  </p>
+                  {r.calibration && (
+                    <div className="calib">
+                      <b>Calibration:</b> {r.load_lb} lb is a guess ({r.calibration.basis}). After set 1, go up 5–10 lb
+                      if it felt easier than RPE {r.calibration.rpe}, down if harder.
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
         </div>
       )}
     </section>

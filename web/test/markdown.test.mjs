@@ -51,6 +51,21 @@ for (const name of briefs) {
     }
   }
 }
+// A wrapped bullet stays one item (the brief wraps long lines at ~88 columns).
+{
+  const html = renderMarkdown(
+    "- **Press:** 50 lb x 10 last time, that's\n  the top of the range. Try 55.\n- Row: as written\n\nAfter the list."
+  );
+  const ok =
+    (html.match(/<li>/g) || []).length === 2 &&
+    html.includes("that&#39;s the top of the range. Try 55.</li>") &&
+    html.includes("<p>After the list.</p>");
+  if (!ok) {
+    console.log(`FAIL  wrapped bullet: ${html}`);
+    failed++;
+  }
+}
+
 // Hostile input. The brief is model-written from free text (workout notes, injury
 // notes, rest reasons), so the renderer is a trust boundary.
 const hostile = {

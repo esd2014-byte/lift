@@ -1,9 +1,10 @@
 /* Lift — phone-first.
    Cool slate ground with a warm accent: streaks read as heat, and the warm/cool
-   tension keeps it off the default warm-on-warm look. Archivo for headings,
+   tension keeps it off the default warm-on-warm look. var(--font-display) for headings,
    IBM Plex Sans for prose, IBM Plex Mono for every number — an instrument feel,
    because the Voltra reports force per rep and this is a measurement app. */
-@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
+/* Fonts are self-hosted by next/font (app/layout.tsx), which sets the three
+   --font-* variables. No request to Google before first paint. */
 
 :root {
   color-scheme: light;
@@ -11,10 +12,12 @@
   --surface: #ffffff;
   --surface-2: #f7f9fa;
   --border: #dfe4ea;
-  --border-strong: #c3ccd6;
+  /* 3:1 against surfaces: input and tile edges must be visible (WCAG 1.4.11). */
+  --border-strong: #8a96a3;
   --ink: #12161b;
   --ink-2: #39424e;
-  --muted: #6b7684;
+  /* 5.3:1 on --bg: secondary text still passes AA under gym lighting. */
+  --muted: #5a6572;
   --accent: #a5490b;
   --accent-ink: #ffffff;
   --accent-soft: #fdf1e6;
@@ -78,7 +81,7 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family:
-    "IBM Plex Sans",
+    var(--font-sans),
     ui-sans-serif,
     -apple-system,
     system-ui,
@@ -98,7 +101,7 @@ body {
 h1,
 h2,
 h3 {
-  font-family: Archivo, system-ui, sans-serif;
+  font-family: var(--font-display), system-ui, sans-serif;
   margin: 0;
   text-wrap: balance;
 }
@@ -108,8 +111,14 @@ h1 {
   letter-spacing: -0.02em;
   line-height: 1.15;
 }
+.eyebrow .plan {
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.85rem;
+}
 .eyebrow {
-  font-family: Archivo, system-ui, sans-serif;
+  font-family: var(--font-display), system-ui, sans-serif;
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -118,7 +127,7 @@ h1 {
   margin: 0 0 10px;
 }
 .num {
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-family: var(--font-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
 }
 .sub {
@@ -170,10 +179,13 @@ section:first-of-type {
   display: flex;
   gap: 6px;
   margin: 4px 0 2px;
+  padding: 0;
+  list-style: none;
 }
 .dot {
   flex: 1;
-  height: 30px;
+  height: 40px;
+  line-height: 1.1;
   border-radius: 7px;
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -182,7 +194,16 @@ section:first-of-type {
   font-size: 0.68rem;
   color: var(--muted);
   font-weight: 600;
-  font-family: Archivo, system-ui, sans-serif;
+  font-family: var(--font-display), system-ui, sans-serif;
+}
+.dot .dnum {
+  font-size: 0.62rem;
+  font-weight: 500;
+  font-family: var(--font-mono), monospace;
+}
+.dot {
+  grid-auto-flow: row;
+  align-content: center;
 }
 .dot.done {
   background: var(--ok-soft);
@@ -257,7 +278,7 @@ section:first-of-type {
   text-transform: uppercase;
   padding: 2px 7px;
   border-radius: 5px;
-  font-family: Archivo, system-ui, sans-serif;
+  font-family: var(--font-display), system-ui, sans-serif;
 }
 .pill.ok {
   background: var(--ok-soft);
@@ -300,7 +321,7 @@ input[type="password"] {
   flex: 1;
   min-width: 0;
   font: inherit;
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--font-mono), monospace;
   padding: 11px 12px;
   border-radius: 9px;
   border: 1px solid var(--border-strong);
@@ -309,7 +330,12 @@ input[type="password"] {
 }
 button.btn,
 a.btn {
-  font-family: Archivo, system-ui, sans-serif;
+  /* 44px: the smallest target a sweaty thumb hits reliably (WCAG 2.5.5, Apple HIG). */
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display), system-ui, sans-serif;
   font-size: 0.88rem;
   font-weight: 600;
   padding: 11px 15px;
@@ -331,7 +357,8 @@ a.btn.block {
 .linkish {
   background: none;
   border: 0;
-  padding: 0;
+  padding: 12px 0;
+  min-height: 44px;
   font: inherit;
   font-size: 0.82rem;
   color: var(--muted);
@@ -358,6 +385,14 @@ a.btn.block {
   margin-top: 8px;
   line-height: 1.5;
 }
+details.guide summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--accent);
+  font-weight: 600;
+}
 .guide b {
   color: var(--ink-2);
   font-weight: 600;
@@ -381,7 +416,8 @@ a.btn.block {
 
 /* ---- today's pumps ---------------------------------------------- */
 .session-title {
-  font-family: Archivo, system-ui, sans-serif;
+  margin: 0;
+  font-family: var(--font-display), system-ui, sans-serif;
   font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: -0.015em;
@@ -397,7 +433,7 @@ a.btn.block {
   background: var(--ink);
   color: var(--bg);
   border: 1px solid var(--ink);
-  font-family: Archivo, system-ui, sans-serif;
+  font-family: var(--font-display), system-ui, sans-serif;
   font-weight: 600;
   font-size: 0.92rem;
   padding: 13px;
@@ -409,7 +445,8 @@ a.btn.block {
   gap: 7px;
 }
 .variant {
-  font-family: Archivo, system-ui, sans-serif;
+  min-height: 56px;
+  font-family: var(--font-display), system-ui, sans-serif;
   text-align: left;
   cursor: pointer;
   background: var(--surface);
@@ -426,7 +463,7 @@ a.btn.block {
 .variant .vmeta {
   font-size: 0.72rem;
   color: var(--muted);
-  font-family: "IBM Plex Sans", sans-serif;
+  font-family: var(--font-sans), sans-serif;
   font-weight: 400;
 }
 .variant[aria-pressed="true"] {
@@ -447,7 +484,7 @@ a.btn.block {
   border-color: var(--accent);
 }
 .variant[data-v="beast"] .vname::after {
-  content: "▲";
+  content: "▲" / "";
   font-size: 0.6em;
   margin-left: 5px;
   color: var(--accent);
@@ -468,7 +505,7 @@ table {
 }
 th {
   text-align: left;
-  font-family: Archivo, system-ui, sans-serif;
+  font-family: var(--font-display), system-ui, sans-serif;
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -486,14 +523,50 @@ td:last-child,
 th:last-child {
   padding-right: 0;
 }
+.exlist {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+.ex {
+  padding: 11px 0 11px 0;
+  border-top: 1px solid var(--border);
+}
+/* Superset members share an accent rail on the left. */
+.ex.inset {
+  padding-left: 11px;
+  border-left: 3px solid var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.exhead {
+  display: flex;
+  gap: 7px;
+  align-items: baseline;
+}
+.exname {
+  font-weight: 600;
+  color: var(--ink);
+}
+.exnums {
+  margin: 4px 0 0;
+  font-size: 0.92rem;
+  color: var(--ink-2);
+}
+.exnums b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.exnums .guess {
+  margin-left: 6px;
+}
+.exnums .sep {
+  color: var(--muted);
+}
 .ss {
   color: var(--accent);
   font-weight: 600;
   font-size: 0.7rem;
-  font-family: Archivo, sans-serif;
-}
-.exname {
-  font-weight: 500;
+  font-family: var(--font-display), sans-serif;
 }
 .station {
   font-size: 0.72rem;
@@ -512,12 +585,12 @@ th:last-child {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--due);
-  font-family: Archivo, sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-weight: 600;
 }
 .repcell {
   white-space: nowrap;
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--font-mono), monospace;
   font-variant-numeric: tabular-nums;
 }
 
@@ -536,6 +609,17 @@ th:last-child {
   background: var(--accent-soft);
   border: 1px solid var(--accent);
   color: var(--ink);
+}
+/* Information, not a problem: neutral, never the error red. */
+.callout.info {
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
+}
+/* Loading placeholders: the shape of what's coming, so the page doesn't jump. */
+.skeleton {
+  background: var(--surface-2);
+  border-radius: 8px;
 }
 
 /* ---- coaching --------------------------------------------------- */
@@ -562,7 +646,7 @@ th:last-child {
   margin-bottom: 5px;
 }
 .coach code {
-  font-family: "IBM Plex Mono", monospace;
+  font-family: var(--font-mono), monospace;
   font-size: 0.85em;
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -571,7 +655,7 @@ th:last-child {
 }
 details.coach-more summary {
   cursor: pointer;
-  font-family: Archivo, sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-weight: 600;
   font-size: 0.85rem;
   color: var(--accent);
@@ -579,17 +663,27 @@ details.coach-more summary {
 }
 
 /* ---- freshness chip --------------------------------------------- */
+.freshrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 11px;
+}
 .freshness {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  margin-top: 11px;
-  font-family: Archivo, system-ui, sans-serif;
-  font-size: 0.74rem;
+  margin: 0;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 0.8rem;
   font-weight: 600;
   padding: 5px 11px 5px 9px;
   border-radius: 999px;
-  cursor: pointer;
+}
+button.btn.small {
+  font-size: 0.8rem;
+  padding: 8px 12px;
 }
 .freshness .fdot {
   width: 7px;
@@ -637,17 +731,21 @@ textarea.reason {
   margin-top: 9px;
 }
 .chip {
-  font-family: Archivo, sans-serif;
-  font-size: 0.74rem;
+  font-family: var(--font-display), sans-serif;
+  font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  padding: 5px 10px;
+  min-height: 44px;
+  padding: 8px 14px;
   border-radius: 999px;
   background: var(--surface);
   border: 1px solid var(--border-strong);
   color: var(--ink-2);
 }
 @media (prefers-reduced-motion: no-preference) {
+  .skeleton {
+    animation: pulse 1.4s ease-in-out infinite;
+  }
   .variant,
   .btn,
   .dot {
@@ -655,6 +753,9 @@ textarea.reason {
       background-color 0.12s ease,
       border-color 0.12s ease,
       color 0.12s ease;
+  }
+  details.adjust > summary::after {
+    transition: transform 0.15s ease;
   }
 }
 
@@ -665,7 +766,7 @@ textarea.reason {
   margin-top: 8px;
 }
 .label {
-  font-family: Archivo, sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -677,8 +778,10 @@ textarea.reason {
   color: var(--muted);
   font-size: 0.9rem;
 }
+/* Upcoming days: no fill and a quiet edge, instead of fading the letter out. */
 .dot.future {
-  opacity: 0.45;
+  background: transparent;
+  border-color: var(--border-strong);
 }
 .tag {
   font-size: 0.64rem;
@@ -691,23 +794,29 @@ textarea.reason {
   padding: 1px 5px;
   margin-left: 7px;
   vertical-align: 2px;
-  font-family: Archivo, sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-weight: 600;
+}
+.chip[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
 }
 .choices {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 6px;
 }
 .choice {
-  font-size: 0.83rem;
+  font-size: 0.88rem;
   font-weight: 500;
+  min-height: 44px;
   padding: 10px 4px;
   background: var(--bg);
-  color: var(--muted);
-  border: 1px solid var(--border);
+  color: var(--ink-2);
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  font-family: Archivo, sans-serif;
+  font-family: var(--font-display), sans-serif;
   cursor: pointer;
 }
 .choice.active {
@@ -716,6 +825,7 @@ textarea.reason {
   color: var(--accent-ink);
 }
 .savebar {
+  flex-direction: column;
   position: sticky;
   bottom: 0;
   margin: 16px -16px -16px;
@@ -732,9 +842,11 @@ textarea.reason {
 a {
   color: var(--accent);
 }
+/* A double ring - accent, then page colour - so focus shows on dark cards too. */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--bg);
   border-radius: 4px;
 }
 
@@ -745,24 +857,32 @@ details.adjust {
 details.adjust > summary {
   cursor: pointer;
   list-style: none;
-  font-family: Archivo, system-ui, sans-serif;
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--muted);
-  padding: 10px 0;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--ink-2);
+  min-height: 48px;
+  padding: 8px 0;
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+details.adjust > summary .current {
+  font-weight: 700;
+  color: var(--ink);
+}
+details.adjust > summary .change {
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 600;
 }
 details.adjust > summary::-webkit-details-marker {
   display: none;
 }
 details.adjust > summary::after {
-  content: "▾";
-  margin-left: auto;
+  content: "▾" / "";
   font-size: 0.9rem;
-  transition: transform 0.15s ease;
+  color: var(--accent);
 }
 details.adjust[open] > summary::after {
   transform: rotate(180deg);
@@ -788,19 +908,19 @@ details.adjust > summary:hover {
   border: 1px solid var(--ink);
 }
 .launchbtn .lname {
-  font-family: Archivo, system-ui, sans-serif;
+  font-family: var(--font-display), system-ui, sans-serif;
   font-weight: 700;
   font-size: 0.98rem;
 }
 .launchbtn .lmeta {
   font-size: 0.74rem;
-  opacity: 0.75;
   line-height: 1.35;
 }
 .launchbtn.off {
   background: transparent;
   color: var(--muted);
   border-color: var(--border-strong);
+  border-style: dashed;
 }
 
 /* ---- persistent header + tabs ------------------------------------------ */
@@ -817,6 +937,8 @@ h1.hype {
 }
 h1.hype button {
   all: unset;
+  display: inline-block;
+  min-height: 44px;
   cursor: pointer;
   font: inherit;
   color: inherit;
@@ -828,7 +950,7 @@ h1.hype button:focus-visible {
   border-radius: 4px;
 }
 .date {
-  font-family: Archivo, system-ui, sans-serif;
+  font-family: var(--font-display), system-ui, sans-serif;
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -863,7 +985,7 @@ h1.hype button:focus-visible {
   border-bottom: 1px solid var(--border);
 }
 .tab {
-  font-family: Archivo, system-ui, sans-serif;
+  font-family: var(--font-display), system-ui, sans-serif;
   font-size: 0.78rem;
   font-weight: 600;
   min-height: 44px;
@@ -901,9 +1023,16 @@ button.btn.danger {
   border-color: var(--bad);
   color: #fff;
 }
-button.btn:disabled {
-  opacity: 0.55;
-  cursor: default;
+/* One disabled look for every button: clearly faded, and says so on hover. */
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+/* A text link inside a sentence, with a 44px tap area that doesn't move the text. */
+a.tap {
+  display: inline-block;
+  padding: 12px 0;
+  margin: -12px 0;
 }
 .timer {
   display: flex;
@@ -935,7 +1064,7 @@ button.btn:disabled {
   margin: 14px 0 0;
 }
 .where {
-  font-family: Archivo, sans-serif;
+  font-family: var(--font-display), sans-serif;
   font-size: 0.64rem;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -949,4 +1078,10 @@ button.btn:disabled {
 }
 .where-hevy {
   color: var(--ink-2);
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
 }

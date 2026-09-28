@@ -42,6 +42,12 @@ A row:
 `superset` is `null` for a standalone exercise; rows sharing a letter are supersetted.
 `note.kind` is `"accent"` (useful) or `"warn"` (a caution).
 
+**Variant names are the app's, not the brief's.** The app always shows the variant keys
+as As planned (`full`), Beast mode (`beast`), Quick (`minimum`), Traveling (`travel`)
+and Rest day, so the words never change day to day. `label` is kept for older briefs
+and ignored. Put what's different about the variant today in `meta` ("15 min · the
+anchor only"): that line is shown under the name.
+
 ### `load_lb` — required on every Voltra row
 
 The number, in pounds, that should be programmed on the device. It is **mandatory for

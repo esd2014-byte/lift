@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { didntSave, postJson } from "@/lib/postJson";
 
 /**
  * Standing injury context from the brief, plus a field to report something new.
@@ -10,20 +11,18 @@ import { useState } from "react";
 export default function InjuryNotes({ html }: { html: string }) {
   const [note, setNote] = useState("");
   const [state, setState] = useState<"idle" | "saving" | "done" | "error">("idle");
+  const [error, setError] = useState<string | null>(null);
 
   async function save() {
     const text = note.trim();
-    if (!text) return;
+    if (!text) return setError("Write what's going on first.");
+    setError(null);
     setState("saving");
     try {
-      const res = await fetch("/api/injury-note", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note: text }),
-      });
-      if (!res.ok) throw new Error(await res.text());
+      await postJson("/api/injury-note", { note: text });
       setState("done");
-    } catch {
+    } catch (err) {
+      setError(didntSave(err));
       setState("error");
     }
   }
@@ -60,15 +59,14 @@ export default function InjuryNotes({ html }: { html: string }) {
             onChange={(e) => setNote(e.target.value)}
             placeholder="Left shoulder felt fine on incline today, first time in months. Right elbow a bit sore on curls — watch it."
           />
-          <button
-            className="btn block quiet"
-            onClick={save}
-            disabled={state === "saving" || !note.trim()}
-            style={{ marginTop: 10 }}
-          >
+          <button className="btn block quiet" onClick={save} disabled={state === "saving"} style={{ marginTop: 10 }}>
             {state === "saving" ? "Saving…" : "Add injury note"}
           </button>
-          {state === "error" && <p className="note">Didn&apos;t save. Try again.</p>}
+          {error && (
+            <p className="note" role="alert">
+              {error}
+            </p>
+          )}
         </div>
       )}
     </section>

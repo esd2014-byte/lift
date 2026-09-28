@@ -7,6 +7,29 @@ import type { BriefData, Row, Variant } from "./types";
  */
 
 /**
+ * The two ideas every screen uses:
+ *
+ *   workout day  the program day the plan is built on: "Day A — Push".
+ *   variant      today's adjustment to it. The app names variants itself, so the
+ *                words never change from day to day, whatever the brief called them.
+ */
+export const VARIANT_NAMES: Record<string, string> = {
+  full: "As planned",
+  beast: "Beast mode",
+  minimum: "Quick",
+  travel: "Traveling",
+  rest: "Rest day",
+};
+
+export const variantName = (key: string) => VARIANT_NAMES[key] ?? key;
+
+/** The workout day the brief is built on, before any variant: "Day A — Push", or the rest day's name. */
+export function workoutDay(brief: BriefData, dayNames: Record<string, string>): string {
+  if (!/^[A-Z]$/.test(brief.day)) return brief.day_name;
+  return `Day ${brief.day} — ${dayNames[brief.day] ?? brief.day_name}`;
+}
+
+/**
  * The program day a variant actually trains.
  *
  * `hevy_routine` on the variant is the contract. Briefs written before that field
@@ -51,6 +74,6 @@ export function voltraTitle(date: string): string {
 
 /** Hevy routine title for today's workout. One routine, rewritten each day. */
 export function hevyTitle(dayTitleText: string, variantKey: string, variant: Variant | undefined): string {
-  const suffix = variantKey !== "full" && variant?.label ? ` · ${variant.label}` : "";
+  const suffix = variantKey !== "full" && variant ? ` · ${variantName(variantKey)}` : "";
   return `Today: ${dayTitleText}${suffix}`;
 }

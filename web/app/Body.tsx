@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import type { DayState } from "@/lib/brief";
 import { MAX_PHOTO_BYTES, base64Bytes } from "@/lib/limits";
+import { didntSave, postJson } from "@/lib/postJson";
+import { shortDate } from "@/lib/session";
 
 /** Weekly cadence for tape and photos - due on day 7, overdue after. */
 function dueState(daysSince: number | null) {
@@ -22,48 +24,57 @@ export default function Body({ state }: { state: DayState }) {
     bw.logged !== null && bw.rolling7 !== null ? { weight: bw.logged, rolling7: bw.rolling7, n: bw.days } : null
   );
 
+  const [bwError, setBwError] = useState<string | null>(null);
+
   const [meas, setMeas] = useState({ waist: "", arm: "", shoulder: "" });
   const [measState, setMeasState] = useState<"idle" | "saving" | "done" | "error">("idle");
+  const [measError, setMeasError] = useState<string | null>(null);
 
   const [photoState, setPhotoState] = useState<"idle" | "saving" | "done" | "error">("idle");
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const camRef = useRef<HTMLInputElement>(null);
   const libRef = useRef<HTMLInputElement>(null);
 
   const measDue = dueState(state.measurements.daysSince);
   const photoDue = dueState(state.photos.daysSince);
 
+  // Log stays tappable: a button that silently does nothing reads as broken. The
+  // check happens on tap, and says what's wrong.
   async function postWeight(value: number | "skip") {
+    if (value !== "skip" && !(value >= 80 && value <= 400)) {
+      setBwError("Enter a weight between 80 and 400 lb.");
+      return;
+    }
+    setBwError(null);
     setBwState("saving");
     try {
-      const res = await fetch("/api/bodyweight", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(value === "skip" ? { skip: true } : { weight: value }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const json = await res.json();
+      const json = await postJson<{ weight: number; rolling7: number; n: number }>(
+        "/api/bodyweight",
+        value === "skip" ? { skip: true } : { weight: value }
+      );
       if (value === "skip") setBwState("skipped");
       else {
         setResult(json);
         setBwState("done");
       }
-    } catch {
+    } catch (err) {
+      setBwError(didntSave(err));
       setBwState("error");
     }
   }
 
   async function saveMeasurements() {
-    if (!meas.waist && !meas.arm && !meas.shoulder) return;
+    if (!meas.waist && !meas.arm && !meas.shoulder) {
+      setMeasError("Enter at least one measurement.");
+      return;
+    }
+    setMeasError(null);
     setMeasState("saving");
     try {
-      const res = await fetch("/api/measurements", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(meas),
-      });
-      if (!res.ok) throw new Error(await res.text());
+      await postJson("/api/measurements", meas);
       setMeasState("done");
-    } catch {
+    } catch (err) {
+      setMeasError(didntSave(err));
       setMeasState("error");
     }
   }
@@ -111,9 +122,17 @@ export default function Body({ state }: { state: DayState }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dataUrl }),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok)
+        throw new Error(
+          ((await res.json().catch(() => null)) as { error?: string } | null)?.error ?? `the server said ${res.status}`
+        );
       setPhotoState("done");
-    } catch {
+    } catch (err) {
+      setPhotoError(
+        err instanceof TypeError
+          ? "Upload failed: no connection."
+          : `Upload failed: ${err instanceof Error ? err.message : err}.`
+      );
       setPhotoState("error");
     }
   }
@@ -157,37 +176,36 @@ export default function Body({ state }: { state: DayState }) {
             </>
           ) : (
             <>
-              <p className="eyebrow">Bodyweight this morning</p>
+              <label className="eyebrow" htmlFor="bw" style={{ display: "block" }}>
+                Bodyweight this morning
+              </label>
               <div className="field">
                 <input
                   type="number"
                   id="bw"
                   inputMode="decimal"
                   step="0.1"
-                  placeholder="152.0"
-                  aria-label="Bodyweight in pounds"
+                  placeholder="lb"
                   value={weight}
                   onChange={(e) => setWeight(e.target.value)}
                 />
-                <button
-                  className="btn"
-                  onClick={() => postWeight(Number(weight))}
-                  disabled={bwState === "saving" || !weight}
-                >
-                  {bwState === "saving" ? "…" : "Log"}
+                <button className="btn" onClick={() => postWeight(Number(weight))} disabled={bwState === "saving"}>
+                  {bwState === "saving" ? "Saving…" : "Log"}
+                </button>
+                <button className="btn quiet" onClick={() => postWeight("skip")} disabled={bwState === "saving"}>
+                  Skip
                 </button>
               </div>
-              <div style={{ marginTop: 9, display: "flex", gap: 14, alignItems: "center" }}>
-                <button className="linkish" onClick={() => postWeight("skip")}>
-                  Skip today
-                </button>
-                {bw.rolling7 !== null && (
-                  <span className="sub" style={{ margin: 0 }}>
-                    7-day avg <span className="num">{bw.rolling7}</span> lb
-                  </span>
-                )}
-              </div>
-              {bwState === "error" && <p className="note">Didn&apos;t save. Try again.</p>}
+              {bw.last && (
+                <p className="hint">
+                  Last: <span className="num">{bw.last.weight}</span> lb on {shortDate(bw.last.date)}
+                </p>
+              )}
+              {bwError && (
+                <p className="note" role="alert">
+                  {bwError}
+                </p>
+              )}
             </>
           )}
         </div>
@@ -206,7 +224,7 @@ export default function Body({ state }: { state: DayState }) {
               <div className="measure">
                 {(["waist", "arm", "shoulder"] as const).map((f) => (
                   <div key={f}>
-                    <label htmlFor={`m-${f}`}>{f[0].toUpperCase() + f.slice(1)}</label>
+                    <label htmlFor={`m-${f}`}>{f[0].toUpperCase() + f.slice(1)} (in)</label>
                     <input
                       type="number"
                       id={`m-${f}`}
@@ -218,13 +236,14 @@ export default function Body({ state }: { state: DayState }) {
                   </div>
                 ))}
               </div>
-              <p className="guide">
+              <details className="guide">
+                <summary>How to measure</summary>
                 <b>Waist</b> at the navel, relaxed, at the end of an exhale — don&apos;t suck in.
                 <br />
                 <b>Arm</b> at the mid-bicep, flexed, elbow at 90°. Same arm every time.
                 <br />
                 <b>Shoulder</b> around the widest point across the delts, arms at your sides.
-              </p>
+              </details>
               <button
                 className="btn block quiet"
                 onClick={saveMeasurements}
@@ -233,7 +252,11 @@ export default function Body({ state }: { state: DayState }) {
               >
                 {measState === "saving" ? "Saving…" : "Save measurements"}
               </button>
-              {measState === "error" && <p className="note">Didn&apos;t save. Try again.</p>}
+              {measError && (
+                <p className="note" role="alert">
+                  {measError}
+                </p>
+              )}
             </>
           )}
         </div>
@@ -245,7 +268,7 @@ export default function Body({ state }: { state: DayState }) {
           </p>
           {photoState === "done" ? (
             <p className="sub" style={{ margin: 0 }}>
-              Saved to the repo. Next one due in 7 days.
+              Saved privately. Next one due in 7 days.
             </p>
           ) : (
             <>
@@ -281,7 +304,11 @@ export default function Body({ state }: { state: DayState }) {
                 hidden
                 onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
               />
-              {photoState === "error" && <p className="note">Upload failed. Try again.</p>}
+              {photoError && photoState === "error" && (
+                <p className="note" role="alert">
+                  {photoError}
+                </p>
+              )}
             </>
           )}
         </div>

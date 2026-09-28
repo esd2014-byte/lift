@@ -8,6 +8,16 @@ const STATE_LABEL: Record<DayState, string> = {
   future: "upcoming",
 };
 
+/** "Tu" and "22": two letters so Tue/Thu and Sat/Sun can't be confused, plus the date. */
+const dayParts = (iso: string) => {
+  const d = new Date(`${iso}T12:00:00Z`);
+  return {
+    abbr: d.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" }).slice(0, 2),
+    num: d.getUTCDate(),
+    long: d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" }),
+  };
+};
+
 /**
  * Contact: did you show up this week. Lives in the header on every tab, because
  * catching a slide early is the point of the whole app.
@@ -25,18 +35,19 @@ export default function WeekStrip({ m }: { m: Metrics }) {
           {m.restThisWeek > 0 && <> · {m.restThisWeek} rest</>}
         </span>
       </div>
-      <div className="weekdots">
-        {m.week.map((d, i) => (
-          <div
-            key={i}
-            className={`dot ${d.state}`}
-            title={`${d.date}: ${STATE_LABEL[d.state]}`}
-            aria-label={`${new Date(`${d.date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" })}: ${STATE_LABEL[d.state]}`}
-          >
-            {d.state === "rest" ? "–" : d.letter}
-          </div>
-        ))}
-      </div>
+      <ul className="weekdots" aria-label="This week">
+        {m.week.map((d, i) => {
+          const p = dayParts(d.date);
+          return (
+            <li key={i} className={`dot ${d.state}`} aria-label={`${p.long}: ${STATE_LABEL[d.state]}`}>
+              <span aria-hidden="true">{p.abbr}</span>
+              <span className="dnum" aria-hidden="true">
+                {p.num}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
       <p className="sub">
         {m.lastSessionDate ? (
           <>

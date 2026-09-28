@@ -3,7 +3,7 @@ import { parse } from "yaml";
 import { readFile, writeFile } from "./store";
 import { createRoutine, listRoutines, updateRoutine, type Routine, type RoutineExercise } from "./hevy";
 import { parseReps, libraryIds, lookupId } from "./voltraSession";
-import { dayTitle, hevyTitle, isVoltraRow, voltraTitle } from "./session";
+import { dayTitle, hevyTitle, isVoltraRow, voltraTitle, variantName } from "./session";
 import type { BriefData, Row } from "./types";
 
 /**
@@ -193,7 +193,7 @@ export async function pushHevyRoutine(
     if (!exercises.length) return { ok: true, action: "none", exercises: 0, skipped };
 
     const notes = [
-      `${variant.label} · ${variant.duration} · written by Lift`,
+      `${variantName(variantKey)} · ${variant.duration} · written by Lift`,
       voltra
         ? `${voltra} cable exercise${voltra === 1 ? " is" : "s are"} on the Voltra: Beyond+ session "${voltraTitle(brief.date)}". Full running order is in Lift.`
         : "",

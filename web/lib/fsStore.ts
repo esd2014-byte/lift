@@ -28,7 +28,9 @@ function resolve(rel: string): string {
 /** Writes are refused when DATA_READONLY is set (the public demo). */
 function assertWritable(rel: string) {
   if (process.env.DATA_READONLY === "1") {
-    throw new ReadOnlyError(`This is a read-only demo; nothing was saved (${rel}).`);
+    // The path goes to the log, not the message: the browser has no use for it.
+    log("data.readonly", { path: rel }, "warn");
+    throw new ReadOnlyError("this is a read-only demo, so nothing was saved");
   }
 }
 
