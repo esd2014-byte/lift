@@ -4,7 +4,7 @@ import { todayISO } from "@/lib/date";
 import { requireAuth } from "@/lib/guard";
 import { verifySession, SESSION_COOKIE } from "@/lib/auth";
 import { publicMessage } from "@/lib/errors";
-import { probe } from "@/lib/voltra";
+import { listSessions, probe, sessionDetail } from "@/lib/voltra";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +24,18 @@ type Check = { group: string; label: string; status: Status; value: string };
 export async function GET(req: NextRequest) {
   const denied = requireAuth(req);
   if (denied) return denied;
+
+  // Raw Beyond+ session data, read-only: ?session=list for ids, ?session=<id> for one.
+  const session = req.nextUrl.searchParams.get("session");
+  if (session) {
+    const body =
+      session === "list"
+        ? (await listSessions()).sessions
+        : /^\d+$/.test(session)
+          ? await sessionDetail(Number(session))
+          : { error: "session must be list or a number" };
+    return new NextResponse(JSON.stringify(body, null, 2), { headers: { "Content-Type": "application/json; charset=utf-8" } });
+  }
 
   const checks = await run(req);
   if (req.nextUrl.searchParams.get("format") === "json") {

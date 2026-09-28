@@ -211,6 +211,8 @@ export async function pushVoltraSession(
     }
     const replyText = JSON.stringify(reply ?? {}).slice(0, 300);
     console.info(`voltra session ${action} "${title}": ${replyText}`);
+    // What was sent, for comparing with a session made in Beyond+ (no secrets in it).
+    console.info(`voltra session payload: ${JSON.stringify(payload).slice(0, 3000)}`);
 
     // Read it back. The device API can answer a request it didn't act on with a
     // success status (a rejected payload looks like a normal reply), so the only

@@ -196,6 +196,22 @@ export function clampLoad(lb: number) {
 }
 
 /**
+ * Read-only: one session's full detail, raw, from each path that might serve it.
+ * For comparing a session the app made with one made in Beyond+.
+ */
+export async function sessionDetail(id: number): Promise<Record<string, unknown>> {
+  const out: Record<string, unknown> = {};
+  for (const path of [`${SESSIONS}/${id}`, `${UPDATE}/${id}`]) {
+    try {
+      out[path] = await call(path);
+    } catch (err) {
+      out[path] = { error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+  return out;
+}
+
+/**
  * Read-only: what a GET to `path` returns - status, shape (keys and array sizes,
  * never values) and how many sessions it holds. For finding the right endpoint
  * from /api/diagnostics?probe=voltra.
