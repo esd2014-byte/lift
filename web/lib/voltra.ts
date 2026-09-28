@@ -120,27 +120,43 @@ export type SessionItemDetail = {
   repCount: number;
   restTime: number;
   tag: 0 | 1 | 2;                    // Normal | Warm-up | Drop Set
+  // Bilateral items use direction 0; one-arm items alternate 1 (Left) and 2 (Right).
   modeConfig: { baseValue: number; direction: 0 | 1 | 2 };
 };
 
 export type SessionItem = {
   itemGroupPosition: number;
   workoutMode: 1 | 2 | 3 | 4;        // Agent v1 exposes only 1..4
+  handMode: 1 | 2;                   // 1 Unilateral | 2 Bilateral
   actionId: number;
   actionModeConfig: Record<string, unknown>;
   itemDetails: SessionItemDetail[];
 };
 
+/**
+ * The "Session Agent Contract v1" create request, as the voltra CLI validates it.
+ * The four fixed fields say: a personal (not coach) session, one device (not
+ * Twin), made by an agent, not copied from another session.
+ */
 export type SessionPayload = {
-  title: string;
+  title: string;                     // at most 50 characters once trimmed
   sessionConfig: Record<string, unknown>;
   blockList: Array<{ blockType: 1 | 2; itemList: SessionItem[] }>;
+  originSessionId: null;
+  accountRole: 0;
+  connectionMode: 0;
+  label: 0;
 };
 
-// Confirmed with /api/diagnostics?probe=voltra: GET /workout/me/sessions returns
-// { code, msg, data: { workoutSessions: [...] } }. The earlier /v2/ paths answer 204
-// with no body - which is also what this API says for any path it doesn't know.
+// Endpoints, from the voltra CLI (the API's own client):
+//   GET  /workout/me/sessions            the list: { code, msg, data: { workoutSessions } }
+//   POST /workout/me/custom-session/v2   create
+//   PUT  /workout/me/sessions/v2/{id}    update (title, sessionConfig, blockList, connectionMode)
+// Paths this API doesn't know answer 204 with no body; a wrong method on a known
+// path answers 405.
 const SESSIONS = "/workout/me/sessions";
+const CREATE = "/workout/me/custom-session/v2";
+const UPDATE = "/workout/me/sessions/v2";
 
 export async function listSessions(): Promise<{ sessions: Array<{ id: number; title: string }>; shape: string }> {
   const d = await call(SESSIONS);
@@ -151,11 +167,10 @@ export async function listSessions(): Promise<{ sessions: Array<{ id: number; ti
  * A write only counts if Beyond+ says so. An empty 204 means it didn't recognise
  * the request; a { code, msg } reply with a non-success code means it refused.
  */
-function writeResult(what: string, d: Record<string, unknown>, emptyIsFailure: boolean) {
-  // A new session is confirmed by reading the list back, so an empty reply there
-  // is left to that check. An update keeps its title, so the list can't prove it
-  // happened - there, no reply means it didn't.
-  if (d?._empty && emptyIsFailure) throw new Error(`Beyond+ ignored the ${what} (HTTP ${d._status}, no reply)`);
+function writeResult(what: string, d: Record<string, unknown>) {
+  if (d?._empty && d._status !== 200 && d._status !== 201) {
+    throw new Error(`Beyond+ ignored the ${what} (HTTP ${d._status}, no reply)`);
+  }
   const code = d?.code;
   const ok = code === undefined || code === 0 || code === 200 || code === "0" || code === "200";
   if (!ok) throw new Error(`Beyond+ refused the ${what}: ${String(d?.msg ?? "no message")} (code ${String(code)})`);
@@ -163,11 +178,16 @@ function writeResult(what: string, d: Record<string, unknown>, emptyIsFailure: b
 }
 
 export async function createSession(payload: SessionPayload) {
-  return writeResult("new session", await call(SESSIONS, { method: "POST", body: JSON.stringify(payload) }), false);
+  return writeResult("new session", await call(CREATE, { method: "POST", body: JSON.stringify(payload) }));
 }
 
+/** An update carries only what can change; the fixed create-only fields stay out. */
 export async function updateSession(id: number, payload: SessionPayload) {
-  return writeResult("session update", await call(`${SESSIONS}/${id}`, { method: "PUT", body: JSON.stringify(payload) }), true);
+  const { title, sessionConfig, blockList, connectionMode } = payload;
+  return writeResult(
+    "session update",
+    await call(`${UPDATE}/${id}`, { method: "PUT", body: JSON.stringify({ title, sessionConfig, blockList, connectionMode }) })
+  );
 }
 
 /** Weight Training accepts 5-230 lb, per the payload validator. */
