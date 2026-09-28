@@ -1,3 +1,6 @@
 # Formatting-only commits: `git blame` skips them (GitHub does too).
-# Prettier adoption
-d07a36aa837a6e6cfbf07a6fce6b8d43d1c81b37
+#
+# List a commit here only if it changes formatting and nothing else. The Prettier
+# adoption was squash-merged together with logic changes (#17), so it can't be listed
+# without hiding real authorship. Merge future formatting-only PRs with "Rebase and
+# merge" so the commit keeps its own hash, then add it here.
