@@ -106,6 +106,8 @@ const eq = (label, got, want) => {
   eq("no date, no brief", B.checkBrief({ ...good, date: "yesterday" }).brief, null);
   eq("no usable variant, no brief", B.checkBrief({ ...good, variants: { full: { rows: [] } } }).brief, null);
   eq("not an object", B.checkBrief("hello").brief, null);
+  eq("a rest day with optional work is still a brief", B.checkBrief({ ...good, day: "rest", day_type: "rest" }).brief?.day, "rest");
+  eq("any other day word is not", B.checkBrief({ ...good, day: "monday" }).brief, null);
 }
 
 // ---- errors ------------------------------------------------------------------------

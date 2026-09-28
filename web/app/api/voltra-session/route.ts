@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/guard";
 import { readFile } from "@/lib/github";
 import { todayISO } from "@/lib/date";
-import { parseDayNames } from "@/lib/program";
 import { pushVoltraSession } from "@/lib/voltraSession";
 import { checkBrief } from "@/lib/briefCheck";
 
@@ -19,10 +18,10 @@ export async function POST(req: NextRequest) {
   if (denied) return denied;
   const { variant = "full", date } = (await req.json().catch(() => ({}))) as { variant?: string; date?: string };
   const day = date ?? todayISO();
-  const [briefRaw, programRaw] = await Promise.all([readFile(`logs/briefs/${day}.json`), readFile("program/current.yaml")]);
+  const briefRaw = await readFile(`logs/briefs/${day}.json`);
   if (!briefRaw) return NextResponse.json({ error: `no brief for ${day}` }, { status: 404 });
   const { brief } = checkBrief(JSON.parse(briefRaw));
   if (!brief) return NextResponse.json({ error: `the brief for ${day} couldn't be read` }, { status: 422 });
-  const result = await pushVoltraSession(brief, variant, parseDayNames(programRaw));
+  const result = await pushVoltraSession(brief, variant);
   return NextResponse.json(result, { status: result.ok ? 200 : 500 });
 }

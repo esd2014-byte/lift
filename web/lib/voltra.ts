@@ -115,43 +115,152 @@ export async function listActions(): Promise<VoltraAction[]> {
 
 // ---- session templates (the daily plan pushed to the device) --------------
 
-export type SessionItemDetail = {
-  position: number;
-  repCount: number;
-  restTime: number;
+// ---- Session Agent Contract v1 ------------------------------------------------
+// From Beyond's Cortex docs: skills/voltra-device-training/references/
+// session-schema-reference.md. The backend does NOT fill in omitted defaults - it
+// stores them as null, which is how a session saves "successfully" with nothing
+// usable in it. So every configuration object is sent in full, with the canonical
+// values from that reference.
+
+type Nullable3 = { eccentricValue: null; chainsValue: null; inverseChainsValue: null };
+
+export type SessionSet = {
+  position: number;                  // 1..N within the item
+  repCount: number;                  // 1..99
+  restTime: number;                  // seconds, multiple of 10
   tag: 0 | 1 | 2;                    // Normal | Warm-up | Drop Set
   // Bilateral items use direction 0; one-arm items alternate 1 (Left) and 2 (Right).
-  modeConfig: { baseValue: number; direction: 0 | 1 | 2 };
+  modeConfig: { baseValue: number; direction: 0 | 1 | 2 } & Nullable3;
 };
 
-export type SessionItem = {
-  itemGroupPosition: number;
-  workoutMode: 1 | 2 | 3 | 4;        // Agent v1 exposes only 1..4
+export type ActionModeConfig = {
+  baseValue: number;
   handMode: 1 | 2;                   // 1 Unilateral | 2 Bilateral
+  restTime: number;
+  assistMode: 0;
+  resistanceExperience: 0;
+  resistanceMode: 0;
+  resistanceCurve: 0;
+  rangeOfMotion: 0;
+  bandLength: 0;
+  eccentricConstantResistance: 0;
+  eccentricIsokinetic: 0;
+  maxEccentricLoad: 0;
+  eccentricInputType: 0;
+  smartLoadValue: 0;
+} & Nullable3;
+
+export type SessionItem = {
+  itemGroupPosition: number;         // 1..N within the block
+  workoutMode: 1;                    // Weight Training; the only mode this app writes
   actionId: number;
-  actionModeConfig: Record<string, unknown>;
-  itemDetails: SessionItemDetail[];
+  actionModeConfig: ActionModeConfig;
+  itemDetails: SessionSet[];
+};
+
+export type SessionConfig = {
+  autoUnloadHoldingTime: number;     // seconds, 0..10
+  targetRepUnload: boolean;
+  zeroUnload: boolean;
+  smartLoadValue: 1 | 2 | 3;         // Normal | Auto | Off
 };
 
 /**
- * The "Session Agent Contract v1" create request, as the voltra CLI validates it.
- * The four fixed fields say: a personal (not coach) session, one device (not
- * Twin), made by an agent, not copied from another session.
+ * The create request. The four fixed fields say: a personal (not coach) session,
+ * one device (not Twin), made by an agent, not copied from another session.
  */
 export type SessionPayload = {
-  title: string;                     // at most 50 characters once trimmed
-  sessionConfig: Record<string, unknown>;
-  blockList: Array<{ blockType: 1 | 2; itemList: SessionItem[] }>;
-  originSessionId: null;
+  title: string;                     // 1..50 characters, unique per account
   accountRole: 0;
   connectionMode: 0;
   label: 0;
+  sessionConfig: SessionConfig;
+  originSessionId: null;
+  blockList: Array<{ blockType: 1; itemList: SessionItem[] }>;
 };
 
-// Endpoints, from the voltra CLI (the API's own client):
+const DISABLED: Nullable3 = { eccentricValue: null, chainsValue: null, inverseChainsValue: null };
+
+export const SESSION_CONFIG: SessionConfig = { autoUnloadHoldingTime: 3, targetRepUnload: false, zeroUnload: false, smartLoadValue: 3 };
+
+/** Rest the contract accepts: whole tens of seconds, 0..290. */
+export function clampRest(sec: number) {
+  return Math.max(0, Math.min(290, Math.round(sec / 10) * 10));
+}
+
+/** Weight Training accepts 5-230 lb. */
+export function clampLoad(lb: number) {
+  return Math.max(5, Math.min(230, Math.round(lb)));
+}
+
+/**
+ * One exercise. A one-arm movement is Unilateral: each set becomes one per side,
+ * alternating left and right.
+ */
+export function sessionItem(o: {
+  position: number;
+  actionId: number;
+  lb: number;
+  sets: number;
+  reps: number;
+  restSec: number;
+  oneArm: boolean;
+}): SessionItem {
+  const baseValue = clampLoad(o.lb);
+  const restTime = clampRest(o.restSec);
+  const repCount = Math.max(1, Math.min(99, Math.round(o.reps)));
+  const sets = Math.max(1, Math.round(o.sets)) * (o.oneArm ? 2 : 1);
+  return {
+    itemGroupPosition: o.position,
+    workoutMode: 1,
+    actionId: o.actionId,
+    actionModeConfig: {
+      baseValue,
+      handMode: o.oneArm ? 1 : 2,
+      restTime,
+      ...DISABLED,
+      assistMode: 0,
+      resistanceExperience: 0,
+      resistanceMode: 0,
+      resistanceCurve: 0,
+      rangeOfMotion: 0,
+      bandLength: 0,
+      eccentricConstantResistance: 0,
+      eccentricIsokinetic: 0,
+      maxEccentricLoad: 0,
+      eccentricInputType: 0,
+      smartLoadValue: 0,
+    },
+    itemDetails: Array.from({ length: sets }, (_, i) => ({
+      position: i + 1,
+      repCount,
+      restTime,
+      tag: 0,
+      modeConfig: { baseValue, direction: o.oneArm ? (((i % 2) + 1) as 1 | 2) : 0, ...DISABLED },
+    })),
+  };
+}
+
+/** The create request around a list of items. */
+export function sessionPayload(title: string, items: SessionItem[]): SessionPayload {
+  return {
+    title: title.trim().slice(0, 50),
+    accountRole: 0,
+    connectionMode: 0,
+    label: 0,
+    sessionConfig: SESSION_CONFIG,
+    originSessionId: null,
+    blockList: [{ blockType: 1, itemList: items }],
+  };
+}
+
+// Endpoints:
 //   GET  /workout/me/sessions            the list: { code, msg, data: { workoutSessions } }
-//   POST /workout/me/custom-session/v2   create
-//   PUT  /workout/me/sessions/v2/{id}    update (title, sessionConfig, blockList, connectionMode)
+//   POST /workout/me/custom-session/v2   create (documented in the Cortex schema reference)
+//   PUT  /workout/me/sessions/v2/{id}    update: title, sessionConfig, blockList,
+//                                        connectionMode only. The path is from the CLI
+//                                        binary, not the docs. The backend replaces the
+//                                        session, so its id changes.
 // Paths this API doesn't know answer 204 with no body; a wrong method on a known
 // path answers 405.
 const SESSIONS = "/workout/me/sessions";
@@ -190,9 +299,21 @@ export async function updateSession(id: number, payload: SessionPayload) {
   );
 }
 
-/** Weight Training accepts 5-230 lb, per the payload validator. */
-export function clampLoad(lb: number) {
-  return Math.max(5, Math.min(230, Math.round(lb)));
+
+/**
+ * Read-only: one session's full detail, raw, from each path that might serve it.
+ * For comparing a session the app made with one made in Beyond+.
+ */
+export async function sessionDetail(id: number): Promise<Record<string, unknown>> {
+  const out: Record<string, unknown> = {};
+  for (const path of [`${SESSIONS}/${id}`, `${UPDATE}/${id}`]) {
+    try {
+      out[path] = await call(path);
+    } catch (err) {
+      out[path] = { error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+  return out;
 }
 
 /**

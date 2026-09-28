@@ -96,7 +96,7 @@ export default function Today({
   const voltraRows = (v?.rows ?? []).filter(isVoltraRow).length;
   const hevyRows = (v?.rows ?? []).length - voltraRows;
   const hevyName = hevyTitle(day, active, v);
-  const voltraName = voltraRows ? voltraTitle(day, data.date) : null;
+  const voltraName = voltraRows ? voltraTitle(data.date) : null;
   const isRunning = phase === "running" || phase === "confirm-end" || phase === "ending";
 
   async function post(body: Record<string, unknown>) {

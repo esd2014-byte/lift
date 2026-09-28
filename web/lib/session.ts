@@ -22,6 +22,7 @@ export function dayTitle(brief: BriefData, variant: Variant | undefined, dayName
     const name = dayNames[m[1]];
     return name ? `Day ${m[1]} — ${name}` : `Day ${m[1]}`;
   }
+  if (!/^[A-Z]$/.test(brief.day)) return brief.day_name; // a rest day's optional work
   return `Day ${brief.day} — ${dayNames[brief.day] ?? brief.day_name}`;
 }
 
@@ -39,14 +40,13 @@ export function shortDate(iso: string): string {
 }
 
 /**
- * The Beyond+ session title: the program day, then the date.
+ * The Beyond+ session title: the workout's date, "2026.09.28".
  *
- * Titled by day so Beyond+ History reads like a training log ("Day A - Push"),
- * with the date so a repeated day is still distinguishable. ASCII only: the device
- * API's handling of other characters is untested.
+ * One session per day, found on the device by date - the same convention as the
+ * sessions already there. The program day is in Lift and the Hevy routine.
  */
-export function voltraTitle(dayTitleText: string, date: string): string {
-  return `${dayTitleText.replace(/\s+—\s+/g, " - ")} (${shortDate(date)})`;
+export function voltraTitle(date: string): string {
+  return date.replace(/-/g, ".");
 }
 
 /** Hevy routine title for today's workout. One routine, rewritten each day. */

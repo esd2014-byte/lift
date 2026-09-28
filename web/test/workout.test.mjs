@@ -84,7 +84,8 @@ const eq = (label, got, want) => {
     "Day E — Upper Hypertrophy"
   );
   eq("hevy_routine wins", S.dayTitle(brief, { label: "x", meta: "Day E", hevy_routine: "Day B — Pull", duration: "", rows: [] }, names), "Day B — Pull");
-  eq("voltra title is ascii + date", S.voltraTitle("Day A — Push", "2030-01-05"), "Day A - Push (Jan 5)");
+  eq("voltra title is the date", S.voltraTitle("2030-01-05"), "2030.01.05");
+  eq("a rest day's work is named by the brief", S.dayTitle({ ...brief, day: "rest", day_name: "Rest day" }, { label: "x", meta: "", duration: "", rows: [] }, names), "Rest day");
   eq("hevy title, full", S.hevyTitle("Day A — Push", "full", { label: "Full" }), "Today: Day A — Push");
   eq("hevy title, variant", S.hevyTitle("Day A — Push", "beast", { label: "Beast mode" }), "Today: Day A — Push · Beast mode");
   eq("cable row is voltra", S.isVoltraRow({ name: "Voltra Row", reps: "3 × 10" }), true);

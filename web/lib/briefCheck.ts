@@ -56,7 +56,9 @@ export function checkBrief(raw: unknown): { brief: BriefData | null; problems: s
   const b = raw as Record<string, unknown>;
 
   const date = typeof b.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(b.date) ? b.date : null;
-  const day = typeof b.day === "string" && /^[A-Z]$/.test(b.day) ? b.day : null;
+  // A program day letter, or "rest": a scheduled rest day can still offer optional
+  // work (a bonus day, the cuff minimum), and that work is still startable.
+  const day = typeof b.day === "string" && (/^[A-Z]$/.test(b.day) || b.day === "rest") ? b.day : null;
   if (!date) problems.push("missing or malformed date");
   if (!day) problems.push("missing or malformed day");
 
@@ -75,7 +77,7 @@ export function checkBrief(raw: unknown): { brief: BriefData | null; problems: s
     brief: {
       date,
       day,
-      day_name: str(b.day_name, 80) ?? `Day ${day}`,
+      day_name: str(b.day_name, 80) ?? (day === "rest" ? "Rest day" : `Day ${day}`),
       day_type: b.day_type === "short" || b.day_type === "rest" ? b.day_type : "real",
       ...(str(b.generated_at, 40) ? { generated_at: str(b.generated_at, 40) } : {}),
       ...(str(b.headline, 300) ? { headline: str(b.headline, 300) } : {}),
