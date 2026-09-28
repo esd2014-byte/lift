@@ -50,7 +50,10 @@ export async function GET() {
     }
   }
   out.syncs = syncs;
-  out.dataTokenExpires = tokenExpiry()?.toISOString() ?? "no expiry reported";
+  const expiry = tokenExpiry();
+  out.dataTokenExpires = expiry
+    ? { date: expiry.date.toISOString().slice(0, 10), source: expiry.source }
+    : "unknown: set DATA_TOKEN_EXPIRES to the date GitHub shows for the token";
 
   try {
     const res = await fetch("https://api.hevyapp.com/v1/workouts/count", {

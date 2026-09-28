@@ -31,15 +31,30 @@ export class GitHubError extends Error {
   }
 }
 
-// Fine-grained tokens report their expiry on every response. Remember the last
-// one seen so the app can warn before the key stops working.
-let tokenExpiresAt: string | null = null;
+// When the data key expires. The reliable source is DATA_TOKEN_EXPIRES, copied from
+// GitHub when the token is made. GitHub's own signal - a header on API responses -
+// is only a fallback: it's absent for some tokens, and for fine-grained tokens it
+// has been seen to report the current time instead of the expiry
+// (google/go-github#3708). A value that close to "now" is ignored rather than
+// trusted, or the app would announce the key expires today on every load.
+let headerExpiry: { value: string; at: number } | null = null;
 
-/** When the data token expires, as last reported by GitHub (null if it doesn't, or unknown). */
-export function tokenExpiry(): Date | null {
-  if (!tokenExpiresAt) return null;
-  const d = new Date(tokenExpiresAt.replace(" UTC", "Z").replace(" ", "T"));
+function parseExpiry(value: string): Date | null {
+  const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00Z` : value.replace(" UTC", "Z").replace(" ", "T"));
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** When the data token expires, and where that came from. Null when unknown. */
+export function tokenExpiry(): { date: Date; source: "DATA_TOKEN_EXPIRES" | "GitHub" } | null {
+  const configured = process.env.DATA_TOKEN_EXPIRES?.trim();
+  if (configured) {
+    const date = parseExpiry(configured);
+    if (date) return { date, source: "DATA_TOKEN_EXPIRES" };
+  }
+  if (!headerExpiry) return null;
+  const date = parseExpiry(headerExpiry.value);
+  if (!date || Math.abs(date.getTime() - headerExpiry.at) < 86_400_000) return null;
+  return { date, source: "GitHub" };
 }
 
 function contentsUrl(path: string) {
@@ -70,7 +85,7 @@ async function gh(url: string, init: RequestInit = {}): Promise<Response> {
     throw new GitHubError("down", 0, timedOut ? `GitHub didn't answer within ${TIMEOUT_MS / 1000}s` : "Couldn't reach GitHub");
   }
   const exp = res.headers.get("github-authentication-token-expiration");
-  if (exp) tokenExpiresAt = exp;
+  if (exp) headerExpiry = { value: exp, at: Date.now() };
   return res;
 }
 

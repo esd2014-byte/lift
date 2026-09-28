@@ -151,7 +151,21 @@ const reply = (status, body, headers = {}) =>
   eq("dir lists files only", dirs, { "logs/photos": ["2030-01-01.jpg"] });
   eq("one request, plus one for the truncated file", calls, 2);
   eq("reads the configured branch", query.includes('"main:a.md"'), true);
-  eq("token expiry remembered", G.tokenExpiry()?.toISOString(), "2030-02-01T12:00:00.000Z");
+  eq("expiry from GitHub", [G.tokenExpiry()?.date.toISOString(), G.tokenExpiry()?.source], ["2030-02-01T12:00:00.000Z", "GitHub"]);
+}
+
+// ---- expiry: the configured date wins; a header that says "now" is ignored ------
+{
+  const nowish = new Date().toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC");
+  globalThis.fetch = async () =>
+    reply(200, { content: b64("x"), encoding: "base64", sha: "s" }, { "github-authentication-token-expiration": nowish });
+  await G.readFile("f");
+  eq("header equal to now is not trusted", G.tokenExpiry(), null);
+  process.env.DATA_TOKEN_EXPIRES = "2031-03-04";
+  eq("configured date wins", [G.tokenExpiry()?.date.toISOString(), G.tokenExpiry()?.source], ["2031-03-04T00:00:00.000Z", "DATA_TOKEN_EXPIRES"]);
+  process.env.DATA_TOKEN_EXPIRES = "not a date";
+  eq("bad configured date falls through", G.tokenExpiry(), null);
+  delete process.env.DATA_TOKEN_EXPIRES;
 }
 
 // ---- GraphQL trouble falls back to plain reads ---------------------------------

@@ -106,7 +106,7 @@ export default async function Page() {
         <Motivation date={state.today} />
         <p className="date">{prettyDate(state.today).replace(/, \d{4}$/, "")}</p>
         <Freshness stale={state.stale} briefDate={state.briefDate} generatedAt={state.generatedAt} />
-        <SyncStatus hevySyncedAt={state.hevySyncedAt} voltraSyncedAt={state.voltraSyncedAt} tokenExpiresAt={tokenExpiry()} />
+        <SyncStatus hevySyncedAt={state.hevySyncedAt} voltraSyncedAt={state.voltraSyncedAt} tokenExpiresAt={tokenExpiry()?.date ?? null} />
         <WeekStrip m={metrics} />
       </header>
 
