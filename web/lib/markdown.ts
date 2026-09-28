@@ -58,7 +58,11 @@ export function renderMarkdown(md: string): string {
     if (/^\s*\|/.test(line) && i + 1 < lines.length && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1])) {
       flushPara();
       const cells = (row: string) =>
-        row.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+        row
+          .trim()
+          .replace(/^\||\|$/g, "")
+          .split("|")
+          .map((c) => c.trim());
       const head = cells(line);
       i += 2;
       const body: string[][] = [];

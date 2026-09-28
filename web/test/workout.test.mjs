@@ -36,7 +36,12 @@ const eq = (label, got, want) => {
 
 // ---- workout log -------------------------------------------------------------
 {
-  let log = W.start([], { date: "2030-01-01", variant: "full", day: "Day A — Push", started_at: "2030-01-01T22:00:00Z" });
+  let log = W.start([], {
+    date: "2030-01-01",
+    variant: "full",
+    day: "Day A — Push",
+    started_at: "2030-01-01T22:00:00Z",
+  });
   eq("one open workout", W.openWorkout(log)?.variant, "full");
 
   // Starting again before ending replaces, it doesn't stack.
@@ -57,7 +62,9 @@ const eq = (label, got, want) => {
   eq("overnight has no minutes", overnight.entry.minutes, null);
   eq("overnight is flagged", overnight.entry.left_open, true);
 
-  const closed = W.closeUnended(W.start([], { date: "2030-01-03", variant: "full", day: "Day C", started_at: "2030-01-03T21:00:00Z" }));
+  const closed = W.closeUnended(
+    W.start([], { date: "2030-01-03", variant: "full", day: "Day C", started_at: "2030-01-03T21:00:00Z" })
+  );
   eq("closed without a time", [closed[0].closed_unended, closed[0].minutes], [true, null]);
   eq("closed isn't open", W.openWorkout(closed), null);
   eq("closed day still counts", W.trainedDates(closed), ["2030-01-03"]);
@@ -68,7 +75,11 @@ const eq = (label, got, want) => {
     W.start([], { date: "2030-01-04", variant: "full", day: "Day D", started_at: "2030-01-04T21:00:00Z" }),
     { date: "2030-01-05", variant: "full", day: "Day E", started_at: "2030-01-05T21:00:00Z" }
   );
-  eq("earlier open workout kept", carried.map((w) => w.date), ["2030-01-04", "2030-01-05"]);
+  eq(
+    "earlier open workout kept",
+    carried.map((w) => w.date),
+    ["2030-01-04", "2030-01-05"]
+  );
   eq("earlier open workout closed", carried[0].closed_unended, true);
   eq("today's is the open one", W.openWorkout(carried)?.date, "2030-01-05");
 }
@@ -83,11 +94,27 @@ const eq = (label, got, want) => {
     S.dayTitle(brief, { label: "Beast", meta: "promote to Day E", duration: "", rows: [] }, names),
     "Day E — Upper Hypertrophy"
   );
-  eq("hevy_routine wins", S.dayTitle(brief, { label: "x", meta: "Day E", hevy_routine: "Day B — Pull", duration: "", rows: [] }, names), "Day B — Pull");
+  eq(
+    "hevy_routine wins",
+    S.dayTitle(brief, { label: "x", meta: "Day E", hevy_routine: "Day B — Pull", duration: "", rows: [] }, names),
+    "Day B — Pull"
+  );
   eq("voltra title is the date", S.voltraTitle("2030-01-05"), "2030.01.05");
-  eq("a rest day's work is named by the brief", S.dayTitle({ ...brief, day: "rest", day_name: "Rest day" }, { label: "x", meta: "", duration: "", rows: [] }, names), "Rest day");
+  eq(
+    "a rest day's work is named by the brief",
+    S.dayTitle(
+      { ...brief, day: "rest", day_name: "Rest day" },
+      { label: "x", meta: "", duration: "", rows: [] },
+      names
+    ),
+    "Rest day"
+  );
   eq("hevy title, full", S.hevyTitle("Day A — Push", "full", { label: "Full" }), "Today: Day A — Push");
-  eq("hevy title, variant", S.hevyTitle("Day A — Push", "beast", { label: "Beast mode" }), "Today: Day A — Push · Beast mode");
+  eq(
+    "hevy title, variant",
+    S.hevyTitle("Day A — Push", "beast", { label: "Beast mode" }),
+    "Today: Day A — Push · Beast mode"
+  );
   eq("cable row is voltra", S.isVoltraRow({ name: "Voltra Row", reps: "3 × 10" }), true);
   eq("db row is not", S.isVoltraRow({ name: "DB Lateral Raise", station: "Small DB", reps: "3 × 10" }), false);
 }
@@ -99,27 +126,61 @@ const eq = (label, got, want) => {
 
   const rows = [
     { superset: "A", name: "Flat DB Press", station: "NUOBELL", reps: "4 × 6-10", rpe: 8, load_lb: 55 },
-    { superset: "A", name: "DB Lateral Raise", station: "Small DB", reps: "3 × 8-12", rpe: 8, load_lb: 25, note: "[small_db] Priority muscle" },
+    {
+      superset: "A",
+      name: "DB Lateral Raise",
+      station: "Small DB",
+      reps: "3 × 8-12",
+      rpe: 8,
+      load_lb: 25,
+      note: "[small_db] Priority muscle",
+    },
     { superset: "B", name: "Voltra Single-Arm Press", station: "Voltra @ pin mount", reps: "3 × 10-15", rpe: 8 },
     { superset: "B", name: "DB Seated OHP", station: "NUOBELL", reps: "3 × 10-15", rpe: 8, load_lb: 30 },
     { name: "Plank", station: "Floor", reps: "3 × 45 s", rpe: 7 },
     { name: "Mystery Move", station: "DB", reps: "3 × 10" },
   ];
   const lib = new Map([
-    ["flat db press", "flat_press"], ["db lateral raise", "lat_raise"], ["db seated ohp", "ohp"], ["plank", "plank"],
-    ["voltra single-arm press", "v_press"], ["mystery move", "mystery"],
+    ["flat db press", "flat_press"],
+    ["db lateral raise", "lat_raise"],
+    ["db seated ohp", "ohp"],
+    ["plank", "plank"],
+    ["voltra single-arm press", "v_press"],
+    ["mystery move", "mystery"],
   ]);
-  const titles = H.hevyTitles(`stock:\n  flat_press: Bench Press (Dumbbell)\n  lat_raise: Lateral Raise (Dumbbell)\n  plank: Plank\ncustom:\n  ohp:\n    title: Seated Overhead Press (Dumbbell)\n`);
+  const titles = H.hevyTitles(
+    `stock:\n  flat_press: Bench Press (Dumbbell)\n  lat_raise: Lateral Raise (Dumbbell)\n  plank: Plank\ncustom:\n  ohp:\n    title: Seated Overhead Press (Dumbbell)\n`
+  );
   const templates = new Map([
-    ["bench press (dumbbell)", "T1"], ["lateral raise (dumbbell)", "T2"], ["seated overhead press (dumbbell)", "T3"], ["plank", "T4"],
+    ["bench press (dumbbell)", "T1"],
+    ["lateral raise (dumbbell)", "T2"],
+    ["seated overhead press (dumbbell)", "T3"],
+    ["plank", "T4"],
   ]);
-  const warmup = [{ exercise_template_id: "W", superset_id: null, notes: "WARM-UP", sets: [{ type: "normal", weight_kg: null, reps: 8 }] }];
-  const { exercises, skipped, voltra } = H.buildExercises({ rows, libraryIds: lib, hevyTitles: titles, templateIds: templates, warmup });
+  const warmup = [
+    {
+      exercise_template_id: "W",
+      superset_id: null,
+      notes: "WARM-UP",
+      sets: [{ type: "normal", weight_kg: null, reps: 8 }],
+    },
+  ];
+  const { exercises, skipped, voltra } = H.buildExercises({
+    rows,
+    libraryIds: lib,
+    hevyTitles: titles,
+    templateIds: templates,
+    warmup,
+  });
 
   eq("warm-up leads", exercises[0].exercise_template_id, "W");
   eq("voltra rows left out and counted", voltra, 1);
   eq("unmapped rows reported", skipped, ["Mystery Move"]);
-  eq("template order", exercises.map((e) => e.exercise_template_id), ["W", "T1", "T2", "T3", "T4"]);
+  eq(
+    "template order",
+    exercises.map((e) => e.exercise_template_id),
+    ["W", "T1", "T2", "T3", "T4"]
+  );
   eq("target weight in kg", exercises[1].sets[0].weight_kg, 24.9);
   eq("sets and bottom of the rep range", [exercises[1].sets.length, exercises[1].sets[0].reps], [4, 6]);
   eq("superset kept when both halves are in Hevy", [exercises[1].superset_id, exercises[2].superset_id], [0, 0]);
@@ -129,7 +190,9 @@ const eq = (label, got, want) => {
 
   // The brief abbreviates; the library doesn't.
   const V = await import(`${out}/voltraSession.js`);
-  const ids = V.libraryIds("push:\n  - {id: nuobell_seated_ohp, name: NUOBELL Seated Overhead Press}\n  - {id: rdl, name: Dumbbell Romanian Deadlift}\n");
+  const ids = V.libraryIds(
+    "push:\n  - {id: nuobell_seated_ohp, name: NUOBELL Seated Overhead Press}\n  - {id: rdl, name: Dumbbell Romanian Deadlift}\n"
+  );
   eq("OHP matches Overhead Press", V.lookupId(ids, "NUOBELL Seated OHP"), "nuobell_seated_ohp");
   eq("DB RDL matches", V.lookupId(ids, "DB RDL"), "rdl");
   eq("exact still wins", V.lookupId(ids, "nuobell seated overhead press"), "nuobell_seated_ohp");

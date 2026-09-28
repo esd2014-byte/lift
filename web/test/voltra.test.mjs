@@ -11,7 +11,10 @@ import { dirname, join } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, "../.test-build/voltra");
-execSync(`npx tsc "${join(here, "../lib/voltra.ts")}" --outDir "${out}" --module esnext --target es2022 --moduleResolution bundler --skipLibCheck`, { stdio: "pipe" });
+execSync(
+  `npx tsc "${join(here, "../lib/voltra.ts")}" --outDir "${out}" --module esnext --target es2022 --moduleResolution bundler --skipLibCheck`,
+  { stdio: "pipe" }
+);
 writeFileSync(join(out, "package.json"), '{ "type": "module" }\n');
 const V = await import(`${out}/voltra.js`);
 
@@ -48,15 +51,56 @@ const payload = V.sessionPayload("2026.09.28", [item, oneArm]);
 // left for the backend to store as null.
 eq("config objects are complete", Object.keys(item.actionModeConfig).length, 20);
 // The CLI sends these explicitly as null (captured from `voltra session create/update`).
-eq("drop-set fields are explicit nulls", [item.actionModeConfig.dropSetHoldingTime, item.actionModeConfig.dropSetTargetReps, item.actionModeConfig.dropSetZeroPosition], [null, null, null]);
-eq("assistantSwitch is an explicit null", "assistantSwitch" in item.itemDetails[0].modeConfig && item.itemDetails[0].modeConfig.assistantSwitch === null, true);
-eq("handMode lives in actionModeConfig", [item.actionModeConfig.handMode, oneArm.actionModeConfig.handMode, "handMode" in item], [2, 1, false]);
-eq("disabled extras are null, never 0", [item.actionModeConfig.chainsValue, item.itemDetails[0].modeConfig.eccentricValue], [null, null]);
-eq("sessionConfig has its defaults", payload.sessionConfig, { autoUnloadHoldingTime: 3, targetRepUnload: false, zeroUnload: false, smartLoadValue: 3 });
-eq("bilateral sets are direction 0", item.itemDetails.map((d) => d.modeConfig.direction), [0, 0, 0]);
-eq("one-arm sets alternate sides", oneArm.itemDetails.map((d) => d.modeConfig.direction), [1, 2, 1, 2]);
-eq("positions are 1-based and consecutive", oneArm.itemDetails.map((d) => d.position), [1, 2, 3, 4]);
-eq("load rounded and clamped", [item.actionModeConfig.baseValue, oneArm.itemDetails[0].modeConfig.baseValue], [60, 230]);
+eq(
+  "drop-set fields are explicit nulls",
+  [
+    item.actionModeConfig.dropSetHoldingTime,
+    item.actionModeConfig.dropSetTargetReps,
+    item.actionModeConfig.dropSetZeroPosition,
+  ],
+  [null, null, null]
+);
+eq(
+  "assistantSwitch is an explicit null",
+  "assistantSwitch" in item.itemDetails[0].modeConfig && item.itemDetails[0].modeConfig.assistantSwitch === null,
+  true
+);
+eq(
+  "handMode lives in actionModeConfig",
+  [item.actionModeConfig.handMode, oneArm.actionModeConfig.handMode, "handMode" in item],
+  [2, 1, false]
+);
+eq(
+  "disabled extras are null, never 0",
+  [item.actionModeConfig.chainsValue, item.itemDetails[0].modeConfig.eccentricValue],
+  [null, null]
+);
+eq("sessionConfig has its defaults", payload.sessionConfig, {
+  autoUnloadHoldingTime: 3,
+  targetRepUnload: false,
+  zeroUnload: false,
+  smartLoadValue: 3,
+});
+eq(
+  "bilateral sets are direction 0",
+  item.itemDetails.map((d) => d.modeConfig.direction),
+  [0, 0, 0]
+);
+eq(
+  "one-arm sets alternate sides",
+  oneArm.itemDetails.map((d) => d.modeConfig.direction),
+  [1, 2, 1, 2]
+);
+eq(
+  "positions are 1-based and consecutive",
+  oneArm.itemDetails.map((d) => d.position),
+  [1, 2, 3, 4]
+);
+eq(
+  "load rounded and clamped",
+  [item.actionModeConfig.baseValue, oneArm.itemDetails[0].modeConfig.baseValue],
+  [60, 230]
+);
 eq("rest in whole tens", item.itemDetails[0].restTime, 100);
 
 // The vendor's own validator, when the voltra CLI is installed (VOLTRA_BIN, or on
@@ -66,7 +110,9 @@ writeFileSync(join(out, "session.json"), JSON.stringify(payload, null, 2));
   const bin = process.env.VOLTRA_BIN || "voltra";
   let stdout = "";
   try {
-    stdout = execSync(`"${bin}" session validate --from "${join(out, "session.json")}" --json`, { stdio: "pipe" }).toString();
+    stdout = execSync(`"${bin}" session validate --from "${join(out, "session.json")}" --json`, {
+      stdio: "pipe",
+    }).toString();
   } catch (err) {
     stdout = err.stdout?.toString() ?? "";
   }
@@ -79,11 +125,24 @@ writeFileSync(join(out, "session.json"), JSON.stringify(payload, null, 2));
 }
 
 await V.createSession(payload);
-eq("create endpoint", [calls[0].method, calls[0].url], ["POST", "https://api.beyond-power.com/agent/workout/me/custom-session/v2"]);
+eq(
+  "create endpoint",
+  [calls[0].method, calls[0].url],
+  ["POST", "https://api.beyond-power.com/agent/workout/me/custom-session/v2"]
+);
 eq("create sends the contract fields", calls[0].body, payload);
 await V.updateSession(42, payload);
-eq("update endpoint", [calls[1].method, calls[1].url], ["PUT", "https://api.beyond-power.com/agent/workout/me/sessions/v2/42"]);
-eq("update sends only what can change", Object.keys(calls[1].body).sort(), ["blockList", "connectionMode", "sessionConfig", "title"]);
+eq(
+  "update endpoint",
+  [calls[1].method, calls[1].url],
+  ["PUT", "https://api.beyond-power.com/agent/workout/me/sessions/v2/42"]
+);
+eq("update sends only what can change", Object.keys(calls[1].body).sort(), [
+  "blockList",
+  "connectionMode",
+  "sessionConfig",
+  "title",
+]);
 
 const rejects = async (label, fn, pattern) => {
   try {

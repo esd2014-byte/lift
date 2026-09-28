@@ -31,13 +31,23 @@ function explain(err: unknown): { title: string; detail: string; fix: string } {
         fix: "Make a new fine-grained token for the data repo (Contents: read and write), set it as DATA_TOKEN in Vercel, and redeploy.",
       };
     }
-    if (err.kind === "rate") return { title: "GitHub needs a breather", detail, fix: "Nothing's broken. Try again after the reset." };
-    if (err.kind === "down") return { title: "GitHub isn't answering", detail, fix: "Usually brief. Try again in a minute; githubstatus.com says if it's them." };
+    if (err.kind === "rate")
+      return { title: "GitHub needs a breather", detail, fix: "Nothing's broken. Try again after the reset." };
+    if (err.kind === "down")
+      return {
+        title: "GitHub isn't answering",
+        detail,
+        fix: "Usually brief. Try again in a minute; githubstatus.com says if it's them.",
+      };
   }
   if (/DATA_(REPO|TOKEN) is not set/.test(detail)) {
     return { title: "The app isn't configured", detail, fix: "Set DATA_REPO and DATA_TOKEN in Vercel, then redeploy." };
   }
-  return { title: "Couldn't load today", detail, fix: "Try again. If it keeps happening, /api/diagnostics shows which part is failing." };
+  return {
+    title: "Couldn't load today",
+    detail,
+    fix: "Try again. If it keeps happening, /api/diagnostics shows which part is failing.",
+  };
 }
 
 export default async function Page() {
@@ -61,7 +71,11 @@ export default async function Page() {
         </div>
         {/* A full reload on purpose: it retries the whole data load from scratch. */}
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a className="btn block" href="/" style={{ display: "block", textAlign: "center", marginTop: 12, textDecoration: "none" }}>
+        <a
+          className="btn block"
+          href="/"
+          style={{ display: "block", textAlign: "center", marginTop: 12, textDecoration: "none" }}
+        >
           Try again
         </a>
       </header>
@@ -78,8 +92,8 @@ export default async function Page() {
     (Date.parse(`${state.today}T12:00:00Z`) - Date.parse(`${date}T12:00:00Z`)) / 86400000 < days;
   const voltraUnnamedRecent = state.voltraSessions.filter((v) => v.unnamed && within(v.date, 14)).length;
   const hevyLeftOpen =
-    (state.sessions as Array<{ date: string; left_open?: boolean }>).find((s) => s.left_open && within(s.date, 7))?.date ??
-    null;
+    (state.sessions as Array<{ date: string; left_open?: boolean }>).find((s) => s.left_open && within(s.date, 7))
+      ?.date ?? null;
 
   const todayTab = state.briefData ? (
     <Today
@@ -93,12 +107,14 @@ export default async function Page() {
     />
   ) : (
     <section>
-      <div className="head"><h2>Today&apos;s pumps</h2></div>
+      <div className="head">
+        <h2>Today&apos;s pumps</h2>
+      </div>
       <div className="card warn">
         <div className="label">No structured session for {state.briefDate ?? "today"}</div>
         <div className="note">
-          This brief predates structured data, so there&apos;s nothing to start here. The session is in
-          the Coaching tab.
+          This brief predates structured data, so there&apos;s nothing to start here. The session is in the Coaching
+          tab.
         </div>
       </div>
     </section>
@@ -110,7 +126,11 @@ export default async function Page() {
         <Motivation date={state.today} />
         <p className="date">{prettyDate(state.today).replace(/, \d{4}$/, "")}</p>
         <Freshness zone={ZONE} stale={state.stale} briefDate={state.briefDate} generatedAt={state.generatedAt} />
-        <SyncStatus hevySyncedAt={state.hevySyncedAt} voltraSyncedAt={state.voltraSyncedAt} tokenExpiresAt={tokenExpiry()?.date ?? null} />
+        <SyncStatus
+          hevySyncedAt={state.hevySyncedAt}
+          voltraSyncedAt={state.voltraSyncedAt}
+          tokenExpiresAt={tokenExpiry()?.date ?? null}
+        />
         <WeekStrip m={metrics} />
       </header>
 
@@ -130,8 +150,16 @@ export default async function Page() {
               </>
             ),
           },
-          { id: "coaching", label: "Coaching", content: <Coaching html={parts ? renderMarkdown(parts.coaching) : ""} /> },
-          { id: "injury", label: "Injury notes", content: <InjuryNotes html={parts ? renderMarkdown(parts.injury) : ""} /> },
+          {
+            id: "coaching",
+            label: "Coaching",
+            content: <Coaching html={parts ? renderMarkdown(parts.coaching) : ""} />,
+          },
+          {
+            id: "injury",
+            label: "Injury notes",
+            content: <InjuryNotes html={parts ? renderMarkdown(parts.injury) : ""} />,
+          },
         ]}
       />
     </>

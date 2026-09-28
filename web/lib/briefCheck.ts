@@ -19,8 +19,11 @@ function row(v: unknown): Row | null {
   const name = str(r.name, 80);
   const reps = str(r.reps, 40) ?? (typeof r.reps === "number" ? String(r.reps) : undefined);
   if (!name || !reps) return null;
-  const load = typeof r.load_lb === "number" && Number.isFinite(r.load_lb) && r.load_lb >= 0 && r.load_lb <= 1000 ? r.load_lb : null;
-  const rpe = typeof r.rpe === "number" && r.rpe >= 0 && r.rpe <= 10 ? r.rpe : str(r.rpe, 10) ?? null;
+  const load =
+    typeof r.load_lb === "number" && Number.isFinite(r.load_lb) && r.load_lb >= 0 && r.load_lb <= 1000
+      ? r.load_lb
+      : null;
+  const rpe = typeof r.rpe === "number" && r.rpe >= 0 && r.rpe <= 10 ? r.rpe : (str(r.rpe, 10) ?? null);
   return {
     name,
     reps,
@@ -45,7 +48,10 @@ function variant(v: unknown, problems: string[], key: string): Variant | null {
     meta: str(x.meta, 200) ?? "",
     duration: str(x.duration, 40) ?? "",
     ...(str(x.hevy_routine, 80) ? { hevy_routine: str(x.hevy_routine, 80) } : {}),
-    note: note && (note.kind === "accent" || note.kind === "warn") && str(note.text, 600) ? { kind: note.kind, text: str(note.text, 600)! } : null,
+    note:
+      note && (note.kind === "accent" || note.kind === "warn") && str(note.text, 600)
+        ? { kind: note.kind, text: str(note.text, 600)! }
+        : null,
     rows,
   };
 }

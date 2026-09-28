@@ -65,7 +65,15 @@ files["logs/voltra/recent.json"] = JSON.stringify({
     // Newer than the Hevy pull (2026-01-05), so it wins: 120 lb x 10 per set.
     { date: "2026-01-06", actions: ["Pull"], action_ids: [1], unnamed: false, sets: 3, reps: 30, avg_force_lb: 119.6 },
     // Two movements in one session: which force was which is unknowable, so ignored.
-    { date: "2026-01-07", actions: ["Pull", "Press"], action_ids: [1, 2], unnamed: false, sets: 6, reps: 60, avg_force_lb: 200 },
+    {
+      date: "2026-01-07",
+      actions: ["Pull", "Press"],
+      action_ids: [1, 2],
+      unnamed: false,
+      sets: 6,
+      reps: 60,
+      avg_force_lb: 200,
+    },
     // A digest written before action ids were kept.
     { date: "2026-01-08", actions: ["Press"], unnamed: false, sets: 3, reps: 30, avg_force_lb: 200 },
   ],
@@ -104,13 +112,28 @@ eq("a row with a load is left alone", G.guessRow(row("Test Cable Pull", { load_l
 eq("a dumbbell row is left alone", G.guessRow(row("Test DB Press"), input), null);
 
 // ---- the brief ----
-const brief = { date: "2026-01-06", day: "A", variants: { full: { label: "Full", meta: "", duration: "", rows: [row("Test Cable Pull"), row("Test DB Press")] } } };
+const brief = {
+  date: "2026-01-06",
+  day: "A",
+  variants: { full: { label: "Full", meta: "", duration: "", rows: [row("Test Cable Pull"), row("Test DB Press")] } },
+};
 const filled = G.fillLoads(brief, input);
-eq("fills load_lb and flags calibration", [filled.variants.full.rows[0].load_lb, Boolean(filled.variants.full.rows[0].calibration)], [105, true]);
+eq(
+  "fills load_lb and flags calibration",
+  [filled.variants.full.rows[0].load_lb, Boolean(filled.variants.full.rows[0].calibration)],
+  [105, true]
+);
 eq("leaves other rows untouched", filled.variants.full.rows[1], brief.variants.full.rows[1]);
 eq("doesn't mutate the brief", brief.variants.full.rows[0].load_lb, undefined);
 
-eq("no history files is fine", G.guessRow(row("Test Cable Pull"), G.guessInputs({ ...files, "logs/hevy/recent.json": null, "logs/voltra/recent.json": "not json" })).source, "none");
+eq(
+  "no history files is fine",
+  G.guessRow(
+    row("Test Cable Pull"),
+    G.guessInputs({ ...files, "logs/hevy/recent.json": null, "logs/voltra/recent.json": "not json" })
+  ).source,
+  "none"
+);
 
 if (failed) {
   console.log(`loadGuess: ${failed} check(s) failed`);

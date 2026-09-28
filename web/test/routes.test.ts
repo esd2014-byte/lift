@@ -60,7 +60,7 @@ function req(body: unknown, { authed = true } = {}) {
 async function call(
   handler: (r: NextRequest, ctx: unknown) => Response | Promise<Response>,
   body: unknown,
-  opts?: { authed?: boolean },
+  opts?: { authed?: boolean }
 ) {
   const res = await handler(req(body, opts), {});
   const text = await res.text();
@@ -144,8 +144,8 @@ test("tolerance: rewrites just the one value in the library", async () => {
   assert.ok(
     after.includes("tolerance: loved}") &&
       !after.includes(
-        "pattern: anti_extension,\n     muscles: {primary: [abs]}, progression: reps, tolerance: untested",
-      ),
+        "pattern: anti_extension,\n     muscles: {primary: [abs]}, progression: reps, tolerance: untested"
+      )
   );
   assert.equal(after.split("\n").length, before.split("\n").length, "comments and layout survive");
   assert.equal((await call(tolerance, { updates: { dead_bug: "meh" } })).status, 400);

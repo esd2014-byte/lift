@@ -6,11 +6,7 @@
  * from what the label promises. Returns the sample size so the UI can say how
  * much the average rests on.
  */
-export function rollingAverage(
-  rows: string[],
-  today: string,
-  days = 7
-): { avg: number | null; n: number } {
+export function rollingAverage(rows: string[], today: string, days = 7): { avg: number | null; n: number } {
   const cutoff = new Date(`${today}T12:00:00Z`);
   cutoff.setUTCDate(cutoff.getUTCDate() - (days - 1));
   const from = cutoff.toISOString().slice(0, 10);

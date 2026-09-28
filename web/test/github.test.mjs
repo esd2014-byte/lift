@@ -119,10 +119,14 @@ const reply = (status, body, headers = {}) =>
     err = e;
   }
   eq("timeout is GitHub down", [err?.kind, /didn't answer/.test(err?.message)], ["down", true]);
-  eq("missing file is null, not an error", await (async () => {
-    globalThis.fetch = async () => reply(404, {});
-    return G.readFile("f");
-  })(), null);
+  eq(
+    "missing file is null, not an error",
+    await (async () => {
+      globalThis.fetch = async () => reply(404, {});
+      return G.readFile("f");
+    })(),
+    null
+  );
 }
 
 // ---- one request for the whole page --------------------------------------------
@@ -135,12 +139,21 @@ const reply = (status, body, headers = {}) =>
       query = JSON.parse(init.body).query;
       return reply(
         200,
-        { data: { repository: {
-          f0: { text: "hello", isTruncated: false, isBinary: false },
-          f1: null,
-          f2: { text: "partial", isTruncated: true, isBinary: false },
-          d0: { entries: [{ name: "2030-01-01.jpg", type: "blob" }, { name: "sub", type: "tree" }] },
-        } } },
+        {
+          data: {
+            repository: {
+              f0: { text: "hello", isTruncated: false, isBinary: false },
+              f1: null,
+              f2: { text: "partial", isTruncated: true, isBinary: false },
+              d0: {
+                entries: [
+                  { name: "2030-01-01.jpg", type: "blob" },
+                  { name: "sub", type: "tree" },
+                ],
+              },
+            },
+          },
+        },
         { "github-authentication-token-expiration": "2030-02-01 12:00:00 UTC" }
       );
     }
@@ -151,18 +164,33 @@ const reply = (status, body, headers = {}) =>
   eq("dir lists files only", dirs, { "logs/photos": ["2030-01-01.jpg"] });
   eq("one request, plus one for the truncated file", calls, 2);
   eq("reads the configured branch", query.includes('"main:a.md"'), true);
-  eq("expiry from GitHub", [G.tokenExpiry()?.date.toISOString(), G.tokenExpiry()?.source], ["2030-02-01T12:00:00.000Z", "GitHub"]);
+  eq(
+    "expiry from GitHub",
+    [G.tokenExpiry()?.date.toISOString(), G.tokenExpiry()?.source],
+    ["2030-02-01T12:00:00.000Z", "GitHub"]
+  );
 }
 
 // ---- expiry: the configured date wins; a header that says "now" is ignored ------
 {
-  const nowish = new Date().toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC");
+  const nowish = new Date()
+    .toISOString()
+    .replace("T", " ")
+    .replace(/\.\d+Z$/, " UTC");
   globalThis.fetch = async () =>
-    reply(200, { content: b64("x"), encoding: "base64", sha: "s" }, { "github-authentication-token-expiration": nowish });
+    reply(
+      200,
+      { content: b64("x"), encoding: "base64", sha: "s" },
+      { "github-authentication-token-expiration": nowish }
+    );
   await G.readFile("f");
   eq("header equal to now is not trusted", G.tokenExpiry(), null);
   process.env.DATA_TOKEN_EXPIRES = "2031-03-04";
-  eq("configured date wins", [G.tokenExpiry()?.date.toISOString(), G.tokenExpiry()?.source], ["2031-03-04T00:00:00.000Z", "DATA_TOKEN_EXPIRES"]);
+  eq(
+    "configured date wins",
+    [G.tokenExpiry()?.date.toISOString(), G.tokenExpiry()?.source],
+    ["2031-03-04T00:00:00.000Z", "DATA_TOKEN_EXPIRES"]
+  );
   process.env.DATA_TOKEN_EXPIRES = "not a date";
   eq("bad configured date falls through", G.tokenExpiry(), null);
   delete process.env.DATA_TOKEN_EXPIRES;
