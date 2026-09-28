@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { publicMessage } from "@/lib/errors";
+import { requireAuth } from "@/lib/guard";
 import { readFile, updateFile } from "@/lib/github";
 import { todayISO } from "@/lib/date";
 import { parseDayNames } from "@/lib/program";
@@ -7,7 +9,8 @@ import { pushVoltraSession } from "@/lib/voltraSession";
 import { pushHevyRoutine } from "@/lib/hevyRoutine";
 import { syncAll } from "@/lib/sync";
 import { closeUnended, end, parseLog, start, type WorkoutEntry } from "@/lib/workouts";
-import { VARIANT_ORDER, type BriefData } from "@/lib/types";
+import { VARIANT_ORDER } from "@/lib/types";
+import { checkBrief } from "@/lib/briefCheck";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -28,6 +31,8 @@ const VARIANTS = "logs/variants.json";
  * The pushes and syncs report their own failures; neither can undo a start or end.
  */
 export async function POST(req: NextRequest) {
+  const denied = requireAuth(req);
+  if (denied) return denied;
   try {
     const body = (await req.json().catch(() => ({}))) as { action?: string; variant?: string; briefDate?: string };
     const now = new Date().toISOString();
@@ -44,7 +49,8 @@ export async function POST(req: NextRequest) {
         readFile("program/current.yaml"),
       ]);
       if (!briefRaw) return NextResponse.json({ error: `no brief for ${date}` }, { status: 404 });
-      const brief = JSON.parse(briefRaw) as BriefData;
+      const { brief } = checkBrief(JSON.parse(briefRaw));
+      if (!brief) return NextResponse.json({ error: `the brief for ${date} couldn't be read` }, { status: 422 });
       if (!brief.variants?.[variant]) return NextResponse.json({ error: "variant not in brief" }, { status: 400 });
       const dayNames = parseDayNames(programRaw);
 
@@ -101,6 +107,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "action must be start, end or close" }, { status: 400 });
   } catch (err) {
     console.error("workout failed", err);
-    return NextResponse.json({ error: (err instanceof Error ? err.message : String(err)).slice(0, 300) }, { status: 500 });
+    return NextResponse.json({ error: publicMessage(err) }, { status: 500 });
   }
 }

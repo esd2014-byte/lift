@@ -1,3 +1,4 @@
+import { publicMessage } from "./errors";
 import { parse } from "yaml";
 import { readFile, writeFile } from "./github";
 import { createRoutine, listRoutines, updateRoutine, type Routine, type RoutineExercise } from "./hevy";
@@ -215,6 +216,6 @@ export async function pushHevyRoutine(
     return { ok: true, title, action, exercises: exercises.length, skipped };
   } catch (err) {
     console.error("hevy routine push failed", err);
-    return { ok: false, error: (err instanceof Error ? err.message : String(err)).slice(0, 300) };
+    return { ok: false, error: publicMessage(err) };
   }
 }

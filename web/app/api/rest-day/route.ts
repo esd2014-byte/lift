@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { publicMessage } from "@/lib/errors";
+import { requireAuth } from "@/lib/guard";
 import { updateFile } from "@/lib/github";
 import { todayISO } from "@/lib/date";
 
@@ -12,6 +14,8 @@ export const dynamic = "force-dynamic";
  * brief opens from what actually happened, and the streak holds instead of resetting.
  */
 export async function POST(req: NextRequest) {
+  const denied = requireAuth(req);
+  if (denied) return denied;
   try {
     const { reason } = (await req.json()) as { reason?: string };
     const text = (reason ?? "").trim();
@@ -38,6 +42,7 @@ export async function POST(req: NextRequest) {
     );
     return NextResponse.json({ ok: true, date: today });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("rest-day failed", err);
+    return NextResponse.json({ error: publicMessage(err) }, { status: 500 });
   }
 }

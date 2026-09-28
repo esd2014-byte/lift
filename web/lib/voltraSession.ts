@@ -1,3 +1,4 @@
+import { publicMessage } from "./errors";
 import { parse } from "yaml";
 import { readFile } from "./github";
 import { createSession, updateSession, listSessions, clampLoad, type SessionPayload, type SessionItem } from "./voltra";
@@ -148,6 +149,6 @@ export async function pushVoltraSession(
     };
   } catch (err) {
     console.error("voltra session push failed", err);
-    return { ok: false, error: (err instanceof Error ? err.message : String(err)).slice(0, 300) };
+    return { ok: false, error: publicMessage(err) };
   }
 }

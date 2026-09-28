@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { publicMessage } from "@/lib/errors";
+import { requireAuth } from "@/lib/guard";
 import { updateFile } from "@/lib/github";
 import { todayISO } from "@/lib/date";
 
@@ -8,6 +10,8 @@ const FIELDS = ["waist", "arm", "shoulder"] as const;
 
 /** Weekly tape measurements. Waist vs arm is what the lean-gain guardrail runs on. */
 export async function POST(req: NextRequest) {
+  const denied = requireAuth(req);
+  if (denied) return denied;
   try {
     const body = (await req.json()) as Record<string, unknown>;
     const values: Record<string, number> = {};
@@ -38,6 +42,7 @@ export async function POST(req: NextRequest) {
     );
     return NextResponse.json({ ok: true, date: today, values });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("measurements failed", err);
+    return NextResponse.json({ error: publicMessage(err) }, { status: 500 });
   }
 }

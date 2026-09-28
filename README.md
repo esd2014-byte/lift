@@ -61,12 +61,22 @@ flowchart LR
 
 ## Security model
 
-Single user. A shared secret is exchanged once for a year-long httpOnly cookie,
-and the gate fails closed if the secret is unset. Only `/api/health` (which returns
-`{ ok: true }` and nothing else) and the cron routes (which check their own bearer
-secret) are reachable without the cookie. Model-written briefs are rendered by a
-small Markdown renderer that escapes everything and allows only `https:` links,
-with regression tests for injection.
+Single user, so no accounts. The secret is typed into `/login` once per device and
+exchanged for a signed, year-long session cookie. The cookie is an HMAC-signed session,
+not the secret, and bumping `SESSION_VERSION` signs every device out. The gate fails
+closed if the secret is unset.
+
+- **Every route checks the session itself.** The `proxy.ts` gate isn't the only check,
+  so a matcher mistake fails closed.
+- **Two public routes:** `/api/health` (returns `{ ok: true }` and nothing else) and the
+  cron routes (which check their own bearer secret, in constant time).
+- **Cross-site requests that change state are refused** (`Sec-Fetch-Site` / `Origin`).
+- **A per-request nonce Content Security Policy** means only scripts the app rendered
+  can run.
+- **The model-written brief is checked twice.** Its JSON is shape-checked and bounded
+  before anything renders or pushes it. Its Markdown goes through a small renderer that
+  escapes everything and allows only `https:` links, with regression tests for injection.
+- **Errors never echo third-party responses to the browser.** Details stay in the logs.
 
 ## Running it
 

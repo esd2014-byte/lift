@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { publicMessage } from "@/lib/errors";
+import { requireAuth } from "@/lib/guard";
 import { updateFile } from "@/lib/github";
 import { todayISO } from "@/lib/date";
 import { rollingAverage } from "@/lib/bodyweight";
@@ -13,6 +15,8 @@ export const dynamic = "force-dynamic";
  * bodyweight that means anything.
  */
 export async function POST(req: NextRequest) {
+  const denied = requireAuth(req);
+  if (denied) return denied;
   try {
     const { weight, skip } = (await req.json()) as { weight?: number; skip?: boolean };
     // A skipped day is recorded explicitly, so the app can tell "not asked yet"
@@ -49,6 +53,7 @@ export async function POST(req: NextRequest) {
       n,
     });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("bodyweight failed", err);
+    return NextResponse.json({ error: publicMessage(err) }, { status: 500 });
   }
 }

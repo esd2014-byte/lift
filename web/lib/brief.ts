@@ -2,6 +2,7 @@ import { readMany } from "./github";
 import { todayISO } from "./date";
 import { rollingAverage } from "./bodyweight";
 import { parseDayNames } from "./program";
+import { checkBrief } from "./briefCheck";
 import { parseLog, type WorkoutEntry } from "./workouts";
 import type { BriefData } from "./types";
 import type { DigestSession, VoltraSession } from "./metrics";
@@ -93,7 +94,10 @@ export async function loadDay(): Promise<DayState> {
 
   const briefDate = briefDates.find((d) => files[`logs/briefs/${d}.md`]) ?? null;
   const briefMarkdown = briefDate ? files[`logs/briefs/${briefDate}.md`] : null;
-  const briefData = briefDate ? parseJson<BriefData>(files[`logs/briefs/${briefDate}.json`]) : null;
+  // Model-written: checked and bounded before anything renders or pushes it.
+  const checked = briefDate ? checkBrief(parseJson<unknown>(files[`logs/briefs/${briefDate}.json`])) : null;
+  const briefData = checked?.brief ?? null;
+  if (checked?.problems.length) console.warn(`brief ${briefDate}: ${checked.problems.join("; ")}`);
 
   // Bodyweight: one row per day; a skipped day is recorded as "skip" so the app
   // can tell "not asked yet" from "asked and declined".

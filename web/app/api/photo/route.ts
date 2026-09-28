@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { publicMessage } from "@/lib/errors";
+import { requireAuth } from "@/lib/guard";
 import { writeBinaryFile } from "@/lib/github";
 import { todayISO } from "@/lib/date";
 import { MAX_PHOTO_BYTES, base64Bytes } from "@/lib/limits";
@@ -14,6 +16,8 @@ export const maxDuration = 30;
  * place everything lives, with no extra storage service to run.
  */
 export async function POST(req: NextRequest) {
+  const denied = requireAuth(req);
+  if (denied) return denied;
   try {
     const { dataUrl } = (await req.json()) as { dataUrl?: string };
     const m = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl ?? "");
@@ -31,6 +35,7 @@ export async function POST(req: NextRequest) {
     await writeBinaryFile(path, b64, `Progress photo ${today}`);
     return NextResponse.json({ ok: true, path, date: today });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("photo failed", err);
+    return NextResponse.json({ error: publicMessage(err) }, { status: 500 });
   }
 }

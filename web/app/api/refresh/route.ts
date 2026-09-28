@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/guard";
 import { syncAll } from "@/lib/sync";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +13,9 @@ export const maxDuration = 60;
  * model - so the app says plainly when the brief is old rather than implying this
  * fixed it.
  */
-export async function POST() {
+export async function POST(req: NextRequest) {
+  const denied = requireAuth(req);
+  if (denied) return denied;
   const results = await syncAll("manual refresh");
   const ok = results.every((r) => r.ok);
   return NextResponse.json({ ok, results }, { status: ok ? 200 : 502 });

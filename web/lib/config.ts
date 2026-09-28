@@ -29,11 +29,3 @@ export function dataRepo(): DataRepo {
 
   return { owner: m[1], repo: m[2], branch: process.env.DATA_BRANCH?.trim() || "main", token };
 }
-
-/** Which variables are in use, for diagnostics. Never returns values. */
-export function dataRepoSource() {
-  return {
-    repoSet: Boolean(process.env.DATA_REPO?.trim()),
-    tokenSet: Boolean(process.env.DATA_TOKEN?.trim()),
-  };
-}

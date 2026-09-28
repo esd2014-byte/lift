@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { publicMessage } from "@/lib/errors";
+import { requireAuth } from "@/lib/guard";
 import { updateFile } from "@/lib/github";
 import { applyTolerances, TOLERANCES } from "@/lib/tolerance";
 
@@ -13,6 +15,8 @@ const LIBRARY_PATH = "library/exercises.yaml";
  * not eight. The client accumulates and posts once.
  */
 export async function POST(req: NextRequest) {
+  const denied = requireAuth(req);
+  if (denied) return denied;
   try {
     const { updates } = (await req.json()) as { updates?: Record<string, string> };
     if (!updates || typeof updates !== "object" || !Object.keys(updates).length) {
@@ -45,6 +49,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, changed: n });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("tolerance failed", err);
+    return NextResponse.json({ error: publicMessage(err) }, { status: 500 });
   }
 }

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { publicMessage } from "@/lib/errors";
+import { requireAuth } from "@/lib/guard";
 import { updateFile } from "@/lib/github";
 import { todayISO } from "@/lib/date";
 
@@ -13,6 +15,8 @@ export const dynamic = "force-dynamic";
  * reads this log, reasons about it, and proposes changes to the rules.
  */
 export async function POST(req: NextRequest) {
+  const denied = requireAuth(req);
+  if (denied) return denied;
   try {
     const { note } = (await req.json()) as { note?: string };
     const text = (note ?? "").trim();
@@ -28,6 +32,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, date: today });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("injury-note failed", err);
+    return NextResponse.json({ error: publicMessage(err) }, { status: 500 });
   }
 }
