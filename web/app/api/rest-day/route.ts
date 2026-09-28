@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFile, writeFile } from "@/lib/github";
+import { updateFile } from "@/lib/github";
 import { todayISO } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
@@ -19,20 +19,23 @@ export async function POST(req: NextRequest) {
     if (text.length > 1000) return NextResponse.json({ error: "reason too long" }, { status: 400 });
 
     const path = "logs/rest-days.json";
-    const existing = (await readFile(path)) ?? "[]";
-    let log: Array<{ date: string; reason: string; logged_at: string }>;
-    try {
-      log = JSON.parse(existing);
-    } catch {
-      log = [];
-    }
-
     const today = todayISO();
-    log = log.filter((r) => r.date !== today); // one entry per day; re-submitting replaces
-    log.push({ date: today, reason: text, logged_at: new Date().toISOString() });
-    log.sort((a, b) => (a.date < b.date ? -1 : 1));
-
-    await writeFile(path, JSON.stringify(log, null, 2) + "\n", `Rest day ${today}: ${text.slice(0, 60)}`);
+    await updateFile(
+      path,
+      (cur) => {
+        let log: Array<{ date: string; reason: string; logged_at: string }>;
+        try {
+          log = JSON.parse(cur ?? "[]");
+        } catch {
+          log = [];
+        }
+        log = log.filter((r) => r.date !== today); // one entry per day; re-submitting replaces
+        log.push({ date: today, reason: text, logged_at: new Date().toISOString() });
+        log.sort((a, b) => (a.date < b.date ? -1 : 1));
+        return JSON.stringify(log, null, 2) + "\n";
+      },
+      `Rest day ${today}: ${text.slice(0, 60)}`
+    );
     return NextResponse.json({ ok: true, date: today });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

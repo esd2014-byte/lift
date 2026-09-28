@@ -7,6 +7,16 @@
  */
 const BASE = "https://api.hevyapp.com/v1";
 
+/** Per call. A slow Hevy must fail fast enough to leave the rest of the request its time. */
+const TIMEOUT_MS = 10_000;
+
+function withTimeout(label: string) {
+  return (err: unknown): never => {
+    const timedOut = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
+    throw new Error(timedOut ? `Hevy didn't answer within ${TIMEOUT_MS / 1000}s (${label})` : `Couldn't reach Hevy (${label})`);
+  };
+}
+
 function key() {
   const k = process.env.HEVY_API_KEY?.trim();
   if (!k) throw new Error("HEVY_API_KEY is not set");
@@ -16,7 +26,9 @@ function key() {
 async function get(path: string, params: Record<string, string | number> = {}) {
   const url = new URL(BASE + path);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
-  const res = await fetch(url, { headers: { "api-key": key() }, cache: "no-store" });
+  const res = await fetch(url, { headers: { "api-key": key() }, cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) }).catch(
+    withTimeout(path)
+  );
   if (!res.ok) throw new Error(`Hevy ${path}: ${res.status}`);
   return res.json();
 }
@@ -51,8 +63,18 @@ export type Workout = {
   }>;
 };
 
-export async function listWorkouts(): Promise<Workout[]> {
-  return (await paginate("/workouts", "workouts")) as Workout[];
+/**
+ * The most recent workouts, newest first. Hevy returns them newest first, so only
+ * the pages that hold `limit` workouts are fetched - not the whole history.
+ */
+export async function listWorkouts(limit = 40): Promise<Workout[]> {
+  return ((await paginate("/workouts", "workouts", Math.ceil(limit / 10))) as Workout[]).slice(0, limit);
+}
+
+/** Lifetime workout count: one call, instead of paging through everything to count. */
+export async function workoutCount(): Promise<number | null> {
+  const d = await get("/workouts/count");
+  return typeof d?.workout_count === "number" ? d.workout_count : null;
 }
 
 async function send(method: "POST" | "PUT", path: string, body: unknown) {
@@ -61,7 +83,8 @@ async function send(method: "POST" | "PUT", path: string, body: unknown) {
     headers: { "api-key": key(), "Content-Type": "application/json" },
     body: JSON.stringify(body),
     cache: "no-store",
-  });
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  }).catch(withTimeout(`${method} ${path}`));
   const text = await res.text();
   if (!res.ok) {
     const err = new Error(`Hevy ${method} ${path}: ${res.status} ${text.slice(0, 200)}`);

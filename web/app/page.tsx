@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { loadDay } from "@/lib/brief";
+import { GitHubError, tokenExpiry } from "@/lib/github";
 import { computeMetrics, mergeSources } from "@/lib/metrics";
 import { trainedDates } from "@/lib/workouts";
 import { prettyDate } from "@/lib/date";
@@ -18,24 +19,48 @@ import Coaching from "./Coaching";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+/** What went wrong reading the data repo, in words that say what to do next. */
+function explain(err: unknown): { title: string; detail: string; fix: string } {
+  const detail = err instanceof Error ? err.message : String(err);
+  if (err instanceof GitHubError) {
+    if (err.kind === "auth") {
+      return {
+        title: "The data key isn't working",
+        detail,
+        fix: "Make a new fine-grained token for the data repo (Contents: read and write), set it as DATA_TOKEN in Vercel, and redeploy.",
+      };
+    }
+    if (err.kind === "rate") return { title: "GitHub needs a breather", detail, fix: "Nothing's broken. Try again after the reset." };
+    if (err.kind === "down") return { title: "GitHub isn't answering", detail, fix: "Usually brief. Try again in a minute; githubstatus.com says if it's them." };
+  }
+  if (/DATA_(REPO|TOKEN) is not set/.test(detail)) {
+    return { title: "The app isn't configured", detail, fix: "Set DATA_REPO and DATA_TOKEN in Vercel, then redeploy." };
+  }
+  return { title: "Couldn't load today", detail, fix: "Try again. If it keeps happening, /api/diagnostics shows which part is failing." };
+}
+
 export default async function Page() {
   let state: Awaited<ReturnType<typeof loadDay>> | null = null;
-  let error: string | null = null;
+  let failure: { title: string; detail: string; fix: string } | null = null;
   try {
     state = await loadDay();
   } catch (err) {
-    error = String(err);
+    failure = explain(err);
   }
 
-  if (error || !state) {
+  if (failure || !state) {
     return (
-      <>
-        <h1>Lift</h1>
-        <div className="card warn" style={{ marginTop: 16 }}>
-          <div className="label">Couldn&apos;t reach the repo</div>
-          <div className="note">{error}</div>
+      <header className="top">
+        <h1 className="hype">Lift</h1>
+        <div className="callout warn" style={{ marginTop: 16 }} role="alert">
+          <b>{failure?.title ?? "Couldn't load today"}</b>
+          <div style={{ marginTop: 6 }}>{failure?.detail}</div>
+          <div style={{ marginTop: 10, fontSize: ".84rem" }}>{failure?.fix}</div>
         </div>
-      </>
+        <a className="btn block" href="/" style={{ display: "block", textAlign: "center", marginTop: 12, textDecoration: "none" }}>
+          Try again
+        </a>
+      </header>
     );
   }
 
@@ -81,7 +106,7 @@ export default async function Page() {
         <Motivation date={state.today} />
         <p className="date">{prettyDate(state.today).replace(/, \d{4}$/, "")}</p>
         <Freshness stale={state.stale} briefDate={state.briefDate} generatedAt={state.generatedAt} />
-        <SyncStatus hevySyncedAt={state.hevySyncedAt} voltraSyncedAt={state.voltraSyncedAt} />
+        <SyncStatus hevySyncedAt={state.hevySyncedAt} voltraSyncedAt={state.voltraSyncedAt} tokenExpiresAt={tokenExpiry()} />
         <WeekStrip m={metrics} />
       </header>
 

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { DayState } from "@/lib/brief";
+import { MAX_PHOTO_BYTES, base64Bytes } from "@/lib/limits";
 
 /** Weekly cadence for tape and photos - due on day 7, overdue after. */
 function dueState(daysSince: number | null) {
@@ -80,12 +81,18 @@ export default function Body({ state }: { state: DayState }) {
         const reader = new FileReader();
         reader.onload = () => {
           img.onload = () => {
-            const scale = Math.min(1, 1200 / Math.max(img.width, img.height));
-            const c = document.createElement("canvas");
-            c.width = Math.round(img.width * scale);
-            c.height = Math.round(img.height * scale);
-            c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
-            resolve(c.toDataURL("image/jpeg", 0.8));
+            // 1200px at q0.8 is usually ~300 KB. If a photo still comes out over the
+            // server's limit, step down until it fits rather than failing the upload.
+            for (const [edge, quality] of [[1200, 0.8], [1200, 0.6], [900, 0.6], [700, 0.5]] as const) {
+              const scale = Math.min(1, edge / Math.max(img.width, img.height));
+              const c = document.createElement("canvas");
+              c.width = Math.round(img.width * scale);
+              c.height = Math.round(img.height * scale);
+              c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+              const url = c.toDataURL("image/jpeg", quality);
+              if (base64Bytes(url.slice(url.indexOf(",") + 1)) <= MAX_PHOTO_BYTES) return resolve(url);
+            }
+            reject(new Error("photo too large"));
           };
           img.onerror = reject;
           img.src = reader.result as string;

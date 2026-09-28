@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFile, writeFile } from "@/lib/github";
+import { updateFile } from "@/lib/github";
 import { applyTolerances, TOLERANCES } from "@/lib/tolerance";
 
 export const dynamic = "force-dynamic";
@@ -24,21 +24,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const raw = await readFile(LIBRARY_PATH);
-    if (!raw) return NextResponse.json({ error: "library not found" }, { status: 500 });
-
-    const edited = applyTolerances(raw, updates);
-    if (edited === raw) return NextResponse.json({ ok: true, changed: 0 });
-
     const n = Object.keys(updates).length;
     const summary = Object.entries(updates)
       .map(([id, v]) => `${id}: ${v}`)
       .join(", ");
-    await writeFile(
+    let found = true;
+    const { changed } = await updateFile(
       LIBRARY_PATH,
-      edited,
+      (raw) => {
+        if (!raw) {
+          found = false;
+          return null;
+        }
+        return applyTolerances(raw, updates);
+      },
       `Rate ${n} exercise${n === 1 ? "" : "s"}\n\n${summary}\n\nRated from the phone.`
     );
+    if (!found) return NextResponse.json({ error: "library not found" }, { status: 500 });
+    if (!changed) return NextResponse.json({ ok: true, changed: 0 });
 
     return NextResponse.json({ ok: true, changed: n });
   } catch (err) {

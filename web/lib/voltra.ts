@@ -18,6 +18,9 @@ function key() {
   return k;
 }
 
+/** Per call. A slow device API must fail fast enough to leave the request its time. */
+const TIMEOUT_MS = 15_000;
+
 async function call(path: string, init: RequestInit = {}) {
   const res = await fetch(BASE + path, {
     ...init,
@@ -27,6 +30,10 @@ async function call(path: string, init: RequestInit = {}) {
       ...(init.headers ?? {}),
     },
     cache: "no-store",
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  }).catch((err: unknown): never => {
+    const timedOut = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
+    throw new Error(timedOut ? `Beyond+ didn't answer within ${TIMEOUT_MS / 1000}s (${path})` : `Couldn't reach Beyond+ (${path})`);
   });
   const text = await res.text();
   if (!res.ok) throw new Error(`Voltra ${path}: ${res.status} ${text.slice(0, 300)}`);

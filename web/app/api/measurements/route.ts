@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFile, writeFile } from "@/lib/github";
+import { updateFile } from "@/lib/github";
 import { todayISO } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
@@ -25,13 +25,17 @@ export async function POST(req: NextRequest) {
 
     const path = "logs/measurements.csv";
     const header = "date,waist_in,arm_in,shoulder_in";
-    const existing = (await readFile(path)) ?? header + "\n";
     const today = todayISO();
-    const rows = existing.trimEnd().split("\n").slice(1).filter((r) => r && !r.startsWith(`${today},`));
-    rows.push(`${today},${values.waist ?? ""},${values.arm ?? ""},${values.shoulder ?? ""}`);
-    rows.sort();
-
-    await writeFile(path, [header, ...rows].join("\n") + "\n", `Measurements ${today}`);
+    await updateFile(
+      path,
+      (cur) => {
+        const rows = (cur ?? header + "\n").trimEnd().split("\n").slice(1).filter((r) => r && !r.startsWith(`${today},`));
+        rows.push(`${today},${values.waist ?? ""},${values.arm ?? ""},${values.shoulder ?? ""}`);
+        rows.sort();
+        return [header, ...rows].join("\n") + "\n";
+      },
+      `Measurements ${today}`
+    );
     return NextResponse.json({ ok: true, date: today, values });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
