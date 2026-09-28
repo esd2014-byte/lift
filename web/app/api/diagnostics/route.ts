@@ -119,20 +119,8 @@ async function run(req: NextRequest): Promise<Check[]> {
 
   // ---- Beyond+ endpoint probe (read-only, on request) ----
   if (req.nextUrl.searchParams.get("probe") === "voltra") {
-    // Two known-good endpoints as controls, then candidates for the session list.
-    const paths = [
-      "/workout/list",
-      "/workout/me/actions",
-      "/workout/me/sessions/v2/",
-      "/workout/me/sessions/v2",
-      "/workout/me/sessions",
-      "/workout/me/session/list",
-      "/workout/sessions",
-      "/workout/session/list",
-      "/session/list",
-      "/sessions",
-      "/sessions/v2",
-    ];
+    // The workout and action lists, and the session list the app writes to.
+    const paths = ["/workout/list", "/workout/me/actions", "/workout/me/sessions"];
     const results = await Promise.all(paths.map(probe));
     console.info("voltra probe", JSON.stringify(results));
     for (const r of results) {

@@ -137,17 +137,37 @@ export type SessionPayload = {
   blockList: Array<{ blockType: 1 | 2; itemList: SessionItem[] }>;
 };
 
+// Confirmed with /api/diagnostics?probe=voltra: GET /workout/me/sessions returns
+// { code, msg, data: { workoutSessions: [...] } }. The earlier /v2/ paths answer 204
+// with no body - which is also what this API says for any path it doesn't know.
+const SESSIONS = "/workout/me/sessions";
+
 export async function listSessions(): Promise<{ sessions: Array<{ id: number; title: string }>; shape: string }> {
-  const d = await call("/workout/me/sessions/v2/");
+  const d = await call(SESSIONS);
   return { sessions: sessionsIn(d), shape: shapeOf(d) };
 }
 
+/**
+ * A write only counts if Beyond+ says so. An empty 204 means it didn't recognise
+ * the request; a { code, msg } reply with a non-success code means it refused.
+ */
+function writeResult(what: string, d: Record<string, unknown>, emptyIsFailure: boolean) {
+  // A new session is confirmed by reading the list back, so an empty reply there
+  // is left to that check. An update keeps its title, so the list can't prove it
+  // happened - there, no reply means it didn't.
+  if (d?._empty && emptyIsFailure) throw new Error(`Beyond+ ignored the ${what} (HTTP ${d._status}, no reply)`);
+  const code = d?.code;
+  const ok = code === undefined || code === 0 || code === 200 || code === "0" || code === "200";
+  if (!ok) throw new Error(`Beyond+ refused the ${what}: ${String(d?.msg ?? "no message")} (code ${String(code)})`);
+  return d;
+}
+
 export async function createSession(payload: SessionPayload) {
-  return call("/workout/me/sessions/v2/", { method: "POST", body: JSON.stringify(payload) });
+  return writeResult("new session", await call(SESSIONS, { method: "POST", body: JSON.stringify(payload) }), false);
 }
 
 export async function updateSession(id: number, payload: SessionPayload) {
-  return call(`/workout/me/sessions/v2/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+  return writeResult("session update", await call(`${SESSIONS}/${id}`, { method: "PUT", body: JSON.stringify(payload) }), true);
 }
 
 /** Weight Training accepts 5-230 lb, per the payload validator. */
