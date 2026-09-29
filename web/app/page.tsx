@@ -5,14 +5,16 @@ import { GitHubError, tokenExpiry } from "@/lib/github";
 import { computeMetrics, mergeSources } from "@/lib/metrics";
 import { trainedDates } from "@/lib/workouts";
 import { prettyDate, ZONE } from "@/lib/date";
-import { renderMarkdown, splitBrief } from "@/lib/markdown";
+import { briefBody, renderMarkdown } from "@/lib/markdown";
 import Freshness from "./Freshness";
 import SyncStatus from "./SyncStatus";
 import WeekStrip from "./WeekStrip";
 import Strength from "./Strength";
 import Motivation from "./Motivation";
 import Tabs from "./Tabs";
-import InjuryNotes from "./InjuryNotes";
+import Injuries from "./Injuries";
+import DayNotes from "./DayNotes";
+import { noteTrainedDates } from "@/lib/dayNotes";
 import Body from "./Body";
 import Today from "./Today";
 import Coaching from "./Coaching";
@@ -85,9 +87,12 @@ export default async function Page() {
 
   // The repo is the system of record: Hevy has the iron, Beyond+ has the cable work,
   // Lift knows which days a workout was started, and only the merge has the whole picture.
-  const merged = mergeSources(state.sessions, state.voltraSessions, trainedDates(state.workouts));
+  // Plus the days the athlete said they trained, in a note, when nothing synced.
+  const liftDates = [...trainedDates(state.workouts), ...noteTrainedDates(state.dayNotes)];
+  const merged = mergeSources(state.sessions, state.voltraSessions, liftDates);
   const metrics = computeMetrics(merged, state.today, state.restDays);
-  const parts = state.briefMarkdown ? splitBrief(state.briefMarkdown) : null;
+  const yesterday = new Date(Date.parse(`${state.today}T12:00:00Z`) - 86400000).toISOString().slice(0, 10);
+  const activeInjuries = state.injuries.filter((i) => i.status === "active").map((i) => i.title);
 
   const within = (date: string, days: number) =>
     (Date.parse(`${state.today}T12:00:00Z`) - Date.parse(`${date}T12:00:00Z`)) / 86400000 < days;
@@ -99,6 +104,8 @@ export default async function Page() {
   const todayTab = state.briefData ? (
     <Today
       data={state.briefData}
+      programDays={state.programDays}
+      activeInjuries={activeInjuries}
       dayNames={state.dayNames}
       today={state.today}
       stale={state.stale}
@@ -150,7 +157,16 @@ export default async function Page() {
 
       <Tabs
         tabs={[
-          { id: "today", label: "Today's pumps", content: todayTab },
+          {
+            id: "today",
+            label: "Today's pumps",
+            content: (
+              <>
+                {todayTab}
+                <DayNotes notes={state.dayNotes} today={state.today} yesterday={yesterday} />
+              </>
+            ),
+          },
           {
             id: "progress",
             label: "Progress",
@@ -172,15 +188,21 @@ export default async function Page() {
             label: "Coaching",
             content: (
               <Coaching
-                html={parts ? renderMarkdown(parts.coaching) : ""}
+                html={state.briefMarkdown ? renderMarkdown(briefBody(state.briefMarkdown)) : ""}
                 workoutDay={state.briefData ? workoutDay(state.briefData, state.dayNames) : null}
+                todayDay={state.briefData?.day ?? null}
+                program={state.program}
+                goals={state.goals}
+                metrics={metrics}
+                bodyweight={state.bodyweight}
+                today={state.today}
               />
             ),
           },
           {
             id: "injury",
-            label: "Injury notes",
-            content: <InjuryNotes html={parts ? renderMarkdown(parts.injury) : ""} />,
+            label: "Injuries",
+            content: <Injuries initial={state.injuries} today={state.today} />,
           },
         ]}
       />

@@ -1,4 +1,31 @@
-# SYNTHETIC program.
+# SYNTHETIC program. Same shapes as program/current.yaml in the data repo.
+meta:
+  version: 1
+  starts: 2030-01-01
+  block: reintroduction
+  block_length_weeks: 4
+
+structure:
+  days_per_week: 2
+  real_days: [A, B]
+  short_days: []
+
 days:
-  A: {name: Push}
-  B: {name: Pull}
+  A:
+    name: Push
+    type: real
+    minutes: [45, 55]
+    blocks:
+      - {slot: 1, exercise: db_bench, sets: 4, reps: [6, 10], rpe: 8, anchor: true}
+      - {slot: 2, superset: [cable_press, cable_pushdown], sets: 3, reps: [10, 15], rpe: 8}
+  B:
+    name: Pull
+    type: real
+    minutes: [40, 50]
+    blocks:
+      - {slot: 1, superset: [cable_pulldown, db_row], sets: 4, reps: [8, 12], rpe: 8}
+      - {slot: 2, exercise: dead_bug, sets: 3, reps: [10, 10], rpe: 7, droppable: true}
+    note: Pull day. Rows before the core work.
+
+testing:
+  next: 2030-01-29

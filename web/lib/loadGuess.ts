@@ -119,11 +119,18 @@ function rpeOf(row: Row): number {
   return Number.isFinite(n) && n >= 5 && n <= 10 ? n : DEFAULT_RPE;
 }
 
-/** The calibration for one row, or null if it has a load or isn't a Voltra row. */
-export function guessRow(row: Row, input: GuessInputs): Calibration | null {
+/**
+ * The calibration for one row, or null if it has a load or isn't a Voltra row.
+ *
+ * `anyRow` also guesses for free-weight rows, for days built from the program rather
+ * than written by the coach. Those only ever get a number from real history: a light
+ * default is right for a cable, wrong for a pair of dumbbells.
+ */
+export function guessRow(row: Row, input: GuessInputs, { anyRow = false } = {}): Calibration | null {
   if (typeof row.load_lb === "number" && Number.isFinite(row.load_lb)) return null;
   const id = lookupId(input.libraryIds, row.name);
-  if (!id || !input.voltraActions[id]) return null;
+  const action = id ? input.voltraActions[id] : undefined;
+  if (!id || (!action && !anyRow)) return null;
 
   const rpe = rpeOf(row);
   const rir = 10 - rpe;
@@ -131,7 +138,7 @@ export function guessRow(row: Row, input: GuessInputs): Calibration | null {
   const base = { reps: row.reps, rpe };
 
   const hevy = lastLogged(input.sessions, input.hevyTitles.get(id));
-  const voltra = lastOnVoltra(input.voltraSessions, input.voltraActions[id], row.name);
+  const voltra = action ? lastOnVoltra(input.voltraSessions, action, row.name) : null;
   const own = hevy && voltra ? (voltra.date >= hevy.date ? voltra : hevy) : (hevy ?? voltra);
   if (own) {
     return {
@@ -155,6 +162,7 @@ export function guessRow(row: Row, input: GuessInputs): Calibration | null {
     }
   }
 
+  if (!action) return null;
   const noted = /(\d+(?:\.\d+)?)\s*lb/i.exec(row.note ?? "");
   if (noted) {
     return {
@@ -168,13 +176,13 @@ export function guessRow(row: Row, input: GuessInputs): Calibration | null {
 }
 
 /** The brief with every Voltra row given a load: its own, or a calibration guess. */
-export function fillLoads(brief: BriefData, input: GuessInputs): BriefData {
+export function fillLoads(brief: BriefData, input: GuessInputs, opts: { anyRow?: boolean } = {}): BriefData {
   const variants: BriefData["variants"] = {};
   for (const [key, v] of Object.entries(brief.variants ?? {})) {
     variants[key] = {
       ...v,
       rows: v.rows.map((row) => {
-        const calibration = guessRow(row, input);
+        const calibration = guessRow(row, input, opts);
         return calibration ? { ...row, load_lb: calibration.lb, calibration } : row;
       }),
     };
@@ -215,7 +223,7 @@ export function guessInputs(files: Record<string, string | null | undefined>): G
 }
 
 /** For routes that read the brief themselves: one extra batched read. */
-export async function withGuessedLoads(brief: BriefData): Promise<BriefData> {
+export async function withGuessedLoads(brief: BriefData, opts: { anyRow?: boolean } = {}): Promise<BriefData> {
   const { files } = await readMany([...GUESS_PATHS], []);
-  return fillLoads(brief, guessInputs(files));
+  return fillLoads(brief, guessInputs(files), opts);
 }

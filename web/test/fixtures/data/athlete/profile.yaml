@@ -1,0 +1,11 @@
+# SYNTHETIC. Same shapes as athlete/profile.yaml in the data repo.
+goals:
+  primary:
+    id: lean-gain
+    statement: Add a little muscle and stay lean.
+    target_rate_lb_per_week: [0.25, 0.5]
+    horizon_weeks: [20, 30]
+  priority_muscles: [arms, shoulders]
+  secondary:
+    - id: shoulder-health
+      statement: Keep the shoulders happy.

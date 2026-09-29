@@ -1085,3 +1085,175 @@ a.tap {
     opacity: 0.5;
   }
 }
+
+/* ---- day choice, day notes, coaching, injuries ------------------- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.variant[data-v="coach"] {
+  grid-column: 1 / -1;
+}
+label.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-top: 6px;
+  font-size: 0.88rem;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+label.check input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+.notelist {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.notelist li {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.notelist p {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+  color: var(--ink-2);
+}
+textarea.reason.small {
+  min-height: 52px;
+  margin-top: 10px;
+}
+
+.rotation {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 5px;
+}
+.rotation li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+.rotation li.short {
+  background: var(--surface-2);
+}
+.rotation li.now {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.rotation .rletter {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 700;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.8rem;
+  flex: none;
+}
+.rotation li.short .rletter {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--border-strong);
+}
+.rotation .rname {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+}
+.rotation .rmeta {
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+.rotation li.now .rmeta {
+  color: var(--accent);
+  font-weight: 600;
+}
+.facts {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+.facts li {
+  margin-bottom: 4px;
+}
+.card.goal {
+  margin-top: 12px;
+}
+.goal-text {
+  margin: 4px 0 6px;
+  font-family: var(--font-display), sans-serif;
+  font-weight: 600;
+  color: var(--ink);
+}
+.goal-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 0.86rem;
+  color: var(--ink-2);
+}
+
+.card.injury {
+  margin-bottom: 10px;
+}
+.card.injury.resolved {
+  background: var(--surface-2);
+}
+.injury-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.injury-head h3 {
+  flex: 1;
+  margin: 0;
+  font-family: var(--font-display), sans-serif;
+  font-size: 1rem;
+  color: var(--ink);
+}
+.timeline {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0 0 0 10px;
+  border-left: 2px solid var(--border);
+  display: grid;
+  gap: 7px;
+  font-size: 0.86rem;
+  color: var(--ink-2);
+}
+.timeline li {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 6px;
+}
+.timeline .when {
+  font-size: 0.74rem;
+  color: var(--muted);
+  padding-top: 2px;
+}

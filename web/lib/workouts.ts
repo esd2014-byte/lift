@@ -20,6 +20,8 @@ export type WorkoutEntry = {
   left_open?: boolean;
   /** Set when an unfinished workout was closed without a duration. */
   closed_unended?: boolean;
+  /** A program day the athlete picked over the coach's recommendation. */
+  off_plan?: boolean;
 };
 
 /** Longer than this and the timer was left running, not trained through. */

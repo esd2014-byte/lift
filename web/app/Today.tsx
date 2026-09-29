@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import type { BriefData, Variant } from "@/lib/types";
 import type { WorkoutEntry } from "@/lib/workouts";
 import { didntSave, postJson } from "@/lib/postJson";
-import { dayTitle, hevyTitle, isVoltraRow, variantName, voltraTitle } from "@/lib/session";
+import { dayTitle, hevyTitle, isVoltraRow, variantName, voltraTitle, workoutDay } from "@/lib/session";
+import { programDayTitle } from "@/lib/programDay";
 
 /** One tap for the usual reasons; the text box is for anything else. */
 const REST_REASONS = ["Travel", "Sick", "Sore", "No time", "Family"];
@@ -35,7 +36,9 @@ const weekday = (iso: string) =>
   new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
 
 export default function Today({
-  data,
+  data: brief,
+  programDays,
+  activeInjuries,
   dayNames,
   today,
   stale,
@@ -44,6 +47,10 @@ export default function Today({
   hevyLeftOpen,
 }: {
   data: BriefData;
+  /** Every program day, built from the program: the choices beyond the coach's pick. */
+  programDays: Record<string, BriefData>;
+  /** Titles of injuries still active, named when the coach's adjustments are skipped. */
+  activeInjuries: string[];
   dayNames: Record<string, string>;
   today: string;
   stale: boolean;
@@ -54,10 +61,28 @@ export default function Today({
   hevyLeftOpen: string | null;
 }) {
   const router = useRouter();
-  const keys = ORDER.filter((k) => data.variants?.[k]);
-
   const running = workouts.filter((w) => !w.ended_at && !w.closed_unended).at(-1) ?? null;
   const runningToday = running && running.date === today ? running : null;
+
+  // The coach's pick is the default. Any other program day can be chosen instead;
+  // it's built from the program as written, without the coach's adjustments.
+  const [pickedDay, setPickedDay] = useState<string | null>(
+    runningToday?.off_plan
+      ? (Object.keys(programDays).find((id) => runningToday.day === programDays[id].variants.full.hevy_routine) ?? null)
+      : null
+  );
+  const data: BriefData = (pickedDay && programDays[pickedDay]) || brief;
+  const offPlan = data !== brief;
+  const keys = ORDER.filter((k) => data.variants?.[k]);
+  const otherDays = Object.keys(programDays).filter((id) => id !== brief.day);
+  /** The brief variant that already trains a program day, e.g. Beast mode promoting to Day A. */
+  const coachVersionOf = (id: string) =>
+    ORDER.find(
+      (k) =>
+        brief.variants?.[k] &&
+        dayTitle(brief, brief.variants[k], dayNames) === programDayTitle({ id, name: dayNames[id] ?? id })
+    );
+
   const unfinished = running && running.date !== today ? running : null;
   const doneToday = workouts.filter((w) => w.date === today && (w.ended_at || w.closed_unended));
 
@@ -120,7 +145,11 @@ export default function Today({
     setError(null);
     setPhase("starting");
     try {
-      const json = await post({ action: "start", variant: active, briefDate: data.date });
+      const json = await post({
+        action: "start",
+        variant: active,
+        ...(offPlan ? { day: pickedDay } : { briefDate: brief.date }),
+      });
       setStartedAt(json.entry.started_at);
       setPushes({ hevy: json.hevy, voltra: json.voltra });
       setNow(Date.now());
@@ -159,6 +188,12 @@ export default function Today({
 
   function pick(k: string) {
     setActive(k);
+    setRestOpen(false);
+  }
+
+  function pickDay(id: string | null, variant = "full") {
+    setPickedDay(id);
+    setActive(id ? "full" : variant);
     setRestOpen(false);
   }
 
@@ -216,18 +251,19 @@ export default function Today({
       )}
 
       <div className="card">
-        {(data.day_type === "short" || stale) && (
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-            {data.day_type === "short" && <span className="pill accent">Short day</span>}
-            {stale && <span className="pill due">{weekday(data.date)}&apos;s plan</span>}
-          </div>
-        )}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+          {offPlan ? <span className="pill due">Your pick</span> : <span className="pill ok">Coach&apos;s pick</span>}
+          {data.day_type === "short" && <span className="pill accent">Short day</span>}
+          {stale && !offPlan && <span className="pill due">{weekday(data.date)}&apos;s plan</span>}
+        </div>
         <p className="session-title">{day}</p>
         <p className="variant-line">
           <b>{restOpen ? variantName("rest") : variantName(active)}</b>
           {!restOpen && v?.duration && <> · {v.duration}</>}
         </p>
-        {stale ? (
+        {offPlan ? (
+          <p className="sub">{v?.meta}</p>
+        ) : stale ? (
           <p className="sub">
             Today&apos;s brief isn&apos;t written yet, so this is {weekday(data.date)}&apos;s plan. Still a good
             session.
@@ -238,6 +274,55 @@ export default function Today({
           v?.meta && <p className="sub">{v.meta}</p>
         )}
       </div>
+
+      {!isRunning && phase !== "ended" && otherDays.length > 0 && (
+        <details className="adjust">
+          <summary>
+            <span>Workout day</span>
+            <span className="current">{offPlan ? `Day ${pickedDay}` : "Coach's pick"}</span>
+            <span className="change">Change</span>
+          </summary>
+          <p className="hint" style={{ marginTop: 9 }}>
+            The coach&apos;s pick accounts for your injuries, history and ratings. Any other day comes straight from the
+            program.
+          </p>
+          <div className="variants" style={{ marginTop: 9 }}>
+            <button className="variant" data-v="coach" aria-pressed={!offPlan} onClick={() => pickDay(null)}>
+              <span className="vname">Coach&apos;s pick</span>
+              <span className="vmeta">{workoutDay(brief, dayNames)}</span>
+            </button>
+            {otherDays.map((id) => {
+              const d = programDays[id];
+              return (
+                <button key={id} className="variant" aria-pressed={pickedDay === id} onClick={() => pickDay(id)}>
+                  <span className="vname">
+                    Day {id} — {d.day_name}
+                  </span>
+                  <span className="vmeta">
+                    {d.day_type === "short" ? "short" : "real"}
+                    {d.variants.full.duration && <> · {d.variants.full.duration}</>}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {offPlan && pickedDay && coachVersionOf(pickedDay) && (
+            <div className="callout accent" style={{ marginTop: 11 }}>
+              <b>
+                {variantName(coachVersionOf(pickedDay)!)} already trains Day {pickedDay}
+              </b>
+              , with the coach&apos;s loads and injury adjustments.
+              <button
+                className="btn quiet block"
+                style={{ marginTop: 10 }}
+                onClick={() => pickDay(null, coachVersionOf(pickedDay)!)}
+              >
+                Use {variantName(coachVersionOf(pickedDay)!)} instead
+              </button>
+            </div>
+          )}
+        </details>
+      )}
 
       {!isRunning && phase !== "ended" && (
         <details className="adjust">
@@ -446,6 +531,14 @@ export default function Today({
           )}
 
           {/* ---- the session ---- */}
+          {offPlan && (
+            <div className="callout warn" style={{ marginTop: 14 }}>
+              <b>Off-plan: Day {pickedDay} as the program writes it.</b> The coach&apos;s adjustments for today
+              aren&apos;t in it: no injury swaps, no extra RPE caps, no swaps for lifts you dislike.
+              {activeInjuries.length > 0 && <> Go by feel around: {activeInjuries.join("; ")}.</>} Tomorrow&apos;s brief
+              sees what you picked.
+            </div>
+          )}
           {v.note && (
             <div className={`callout ${v.note.kind}`} style={{ marginTop: 14 }}>
               {v.note.text}
@@ -453,9 +546,9 @@ export default function Today({
           )}
           {calibrating > 0 && (
             <div className="callout warn" style={{ marginTop: 10 }}>
-              <b>Calibration day for {calibrating === 1 ? "one Voltra lift" : `${calibrating} Voltra lifts`}.</b> The
-              brief didn&apos;t set {calibrating === 1 ? "its weight" : "their weights"}, so Lift guessed from your
-              history. Each is marked below: treat set 1 as a feeler, adjust, and log what you finish on.
+              <b>Calibration day for {calibrating === 1 ? "one lift" : `${calibrating} lifts`}.</b>{" "}
+              {offPlan ? "The program has no weights" : "The brief didn't set them"}, so Lift guessed from your history.
+              Each is marked below: treat set 1 as a feeler, adjust, and log what you finish on.
             </div>
           )}
           <p className="handoff">
