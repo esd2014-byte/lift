@@ -299,7 +299,7 @@ export default function Today({
                     Day {id} — {d.day_name}
                   </span>
                   <span className="vmeta">
-                    {d.day_type === "short" ? "short" : "real"}
+                    {d.day_type === "short" ? "short" : "full"}
                     {d.variants.full.duration && <> · {d.variants.full.duration}</>}
                   </span>
                 </button>
