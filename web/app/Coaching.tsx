@@ -65,7 +65,7 @@ export default function Coaching({
           <p className="sub" style={{ marginTop: 0 }}>
             {[
               `${perWeek} training days a week`,
-              real.length ? `${real.length} real (${range(real)})` : "",
+              real.length ? `${real.length} full (${range(real)})` : "",
               short.length ? `${short.length} short (${range(short)})` : "",
               perWeek < 7 ? `${7 - perWeek} rest` : "",
             ]
