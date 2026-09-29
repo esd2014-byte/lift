@@ -19,7 +19,8 @@ import { readFile as storeRead } from "@/lib/store";
 import { POST as bodyweight } from "@/app/api/bodyweight/route";
 import { POST as measurements } from "@/app/api/measurements/route";
 import { POST as restDay } from "@/app/api/rest-day/route";
-import { POST as injuryNote } from "@/app/api/injury-note/route";
+import { POST as injuries } from "@/app/api/injuries/route";
+import { POST as dayNote } from "@/app/api/day-note/route";
 import { POST as tolerance } from "@/app/api/tolerance/route";
 import { POST as workout } from "@/app/api/workout/route";
 import { POST as photo } from "@/app/api/photo/route";
@@ -73,7 +74,7 @@ async function call(
 
 // ---- auth: every write route refuses a request without a session --------------------
 test("every write route 404s without a session", async () => {
-  for (const h of [bodyweight, measurements, restDay, injuryNote, tolerance, workout, photo]) {
+  for (const h of [bodyweight, measurements, restDay, injuries, dayNote, tolerance, workout, photo]) {
     const r = await call(h, {}, { authed: false });
     assert.equal(r.status, 404);
   }
@@ -127,12 +128,50 @@ test("rest day: stored with the reason, one per day", async () => {
   assert.equal((await call(restDay, { reason: "  " })).status, 400);
 });
 
-test("injury note: appended under today's date, never overwriting", async () => {
-  await call(injuryNote, { note: "shoulder twinge on the press" });
-  await call(injuryNote, { note: "better after warm-up" });
-  const md = file("logs/injury-notes.md");
-  assert.ok(md.includes("shoulder twinge") && md.includes("better after warm-up"));
-  assert.equal(md.split(`## ${today}`).length - 1, 2);
+test("injuries: report, update, resolve and reopen one card", async () => {
+  const r = await call(injuries, { action: "create", text: "Right elbow sore after curls. Sharp at the bottom." });
+  assert.equal(r.status, 200);
+  const id = (r.json.injury as { id: string }).id;
+  assert.equal(id, `${today}-1`);
+  await call(injuries, { action: "create", text: "Left knee clicks." });
+  await call(injuries, { action: "update", id, text: "Better with hammer grip." });
+  await call(injuries, { action: "resolve", id });
+  let list = JSON.parse(file("logs/injuries.json"));
+  assert.equal(list.length, 2);
+  assert.equal(list[0].title, "Right elbow sore after curls");
+  assert.equal(list[0].status, "resolved");
+  assert.deepEqual(
+    list[0].updates.map((u: { text: string }) => u.text),
+    ["Right elbow sore after curls. Sharp at the bottom.", "Better with hammer grip.", "Marked resolved."]
+  );
+  assert.equal(list[1].id, `${today}-2`, "ids don't collide on the same day");
+  await call(injuries, { action: "reopen", id });
+  list = JSON.parse(file("logs/injuries.json"));
+  assert.equal(list[0].status, "active");
+  assert.equal(list[0].resolved_at, null);
+});
+
+test("injuries: bad requests are refused", async () => {
+  assert.equal((await call(injuries, { action: "create", text: " " })).status, 400);
+  assert.equal((await call(injuries, { action: "update", id: "nope", text: "x" })).status, 404);
+  assert.equal((await call(injuries, { action: "resolve", id: "nope" })).status, 404);
+  assert.equal((await call(injuries, { action: "delete", id: "x" })).status, 400);
+  assert.equal((await call(injuries, { action: "create", text: "x".repeat(2001) })).status, 400);
+});
+
+test("day notes: appended; a trained note counts toward the streak", async () => {
+  await call(dayNote, { text: "Beyond+ split one calibration workout into four sessions." });
+  const r = await call(dayNote, { text: "Pushups at home, not logged.", when: "yesterday", trained: true });
+  assert.equal(r.status, 200);
+  const notes = JSON.parse(file("logs/day-notes.json"));
+  assert.equal(notes.length, 2);
+  assert.equal(notes[0].date < notes[1].date, true, "kept in date order");
+  assert.equal(notes[0].trained, true);
+  assert.equal(notes[1].trained, false);
+  const day = await loadDay();
+  assert.equal(day.dayNotes.length, 2);
+  assert.equal((await call(dayNote, { text: "" })).status, 400);
+  assert.equal((await call(dayNote, { text: "x", when: "last week" })).status, 400);
 });
 
 // ---- tolerance ratings ----------------------------------------------------------------
@@ -170,6 +209,19 @@ test("workout: end closes the running workout; ending again is a 409", async () 
   assert.equal(r.status, 200);
   assert.ok(JSON.parse(file("logs/workouts.json"))[0].ended_at);
   assert.equal((await call(workout, { action: "end" })).status, 409);
+});
+
+test("workout: an off-plan program day starts from the program, and the log says so", async () => {
+  const r = await call(workout, { action: "start", variant: "full", day: "B" });
+  assert.equal(r.status, 200);
+  const log = JSON.parse(file("logs/workouts.json"));
+  assert.equal(log[0].day, "Day B — Pull");
+  assert.equal(log[0].off_plan, true);
+  const chosen = JSON.parse(file("logs/variants.json"))[0];
+  assert.equal(chosen.day, "Day B — Pull");
+  assert.equal(chosen.off_plan, true);
+  assert.equal((await call(workout, { action: "start", variant: "full", day: "Q" })).status, 404);
+  assert.equal((await call(workout, { action: "start", variant: "beast", day: "B" })).status, 400);
 });
 
 test("workout: bad requests are refused", async () => {
@@ -214,6 +266,31 @@ test("page data: today's brief, with Voltra loads guessed as calibration", async
   // Rows with a load, and non-Voltra rows, are left alone.
   assert.equal(rows.find((r) => r.name === "DB Bench Press")!.calibration, undefined);
   assert.equal(rows.find((r) => r.name === "Dead Bug")!.calibration, undefined);
+});
+
+test("page data: every program day, with loads from history", async () => {
+  const day = await loadDay();
+  assert.deepEqual(Object.keys(day.programDays), ["A", "B"]);
+  const pull = day.programDays.B.variants.full;
+  assert.equal(pull.hevy_routine, "Day B — Pull");
+  assert.deepEqual(
+    pull.rows.map((r) => [r.superset, r.name, r.reps]),
+    [
+      ["A", "Cable Lat Pulldown", "4 × 8-12"],
+      ["A", "DB Row", "4 × 8-12"],
+      [null, "Dead Bug", "3 × 10"],
+    ]
+  );
+  // DB Row: a free-weight row gets a number from its own history only (55 x 10).
+  const row = pull.rows.find((r) => r.name === "DB Row")!;
+  assert.equal(row.calibration?.source, "history");
+  assert.equal(typeof row.load_lb, "number");
+  // Pulldown: a Voltra row, guessed the usual way from its device history.
+  assert.equal(pull.rows[0].calibration?.source, "history");
+  // Dead Bug: no history, bodyweight - no invented number.
+  assert.equal(pull.rows[2].load_lb, undefined);
+  assert.equal(day.program?.meta.block, "reintroduction");
+  assert.equal(day.goals?.primary?.statement, "Add a little muscle and stay lean.");
 });
 
 test("page data: bodyweight, measurements and history come through", async () => {

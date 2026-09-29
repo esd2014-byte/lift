@@ -46,11 +46,15 @@ flowchart LR
    injury constraints and the digests, and writes the day's brief: which session,
    why, at what loads. The brief has a prose part and a JSON part that follows
    [a documented schema](docs/brief-schema.md).
-3. **At the gym.** The app shows the session and lets you swap variants (full,
-   minimum, traveling, can't train). **Start** writes today's routine into Hevy and
-   today's session onto the Voltra, with the weights, so both are waiting. **End**
-   pulls the finished work back in.
-4. **Always.** The week strip counts distinct training days against a weekly
+3. **At the gym.** The app shows the coach's pick and lets you swap variants (as
+   planned, beast mode, quick, traveling, can't train) or pick any other program day,
+   built from the program with weights from your history. **Start** writes the
+   routine into Hevy and the session onto the Voltra, with the weights, so both are
+   waiting. **End** pulls the finished work back in.
+4. **After.** A note says what the logs can't: a session split across apps, work
+   that never got logged. Injuries are tracked as cards with updates until they
+   resolve. The next morning's brief reads both before it reads the data.
+5. **Always.** The week strip counts distinct training days against a weekly
    target, and a Strength Index tracks estimated 1RM across four anchor lifts.
 
 ## Design decisions

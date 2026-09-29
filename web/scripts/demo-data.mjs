@@ -133,6 +133,61 @@ for (let n = 30; n >= 1; n--)
 writeFileSync(join(out, "logs/bodyweight.csv"), bw.join("\n") + "\n");
 writeFileSync(join(out, "logs/measurements.csv"), `date,waist_in,arm_in,shoulder_in\n${daysAgo(12)},33.5,15.25,48.5\n`);
 
+// The program started four weeks ago; one injury on the mend, one long gone.
+const programPath = join(out, "program/current.yaml");
+writeFileSync(
+  programPath,
+  readFileSync(programPath, "utf8")
+    .replace(/starts: \S+/, `starts: ${daysAgo(10)}`)
+    .replace(/next: \S+/, `next: ${daysAgo(-18)}`)
+);
+const at = (n) => `${daysAgo(n)}T13:00:00.000Z`;
+writeFileSync(
+  join(out, "logs/injuries.json"),
+  JSON.stringify(
+    [
+      {
+        id: `${daysAgo(40)}-1`,
+        title: "Left knee ache on deep squats",
+        started: daysAgo(40),
+        status: "resolved",
+        resolved_at: at(26),
+        updates: [
+          { at: at(40), text: "Left knee ache on deep squats. Fine walking." },
+          { at: at(26), text: "Marked resolved." },
+        ],
+      },
+      {
+        id: `${daysAgo(9)}-1`,
+        title: "Right elbow sore after curls",
+        started: daysAgo(9),
+        status: "active",
+        updates: [
+          { at: at(9), text: "Right elbow sore after curls. Sharp at the bottom of the rep." },
+          { at: at(3), text: "Better. Hammer grip doesn't bother it." },
+        ],
+      },
+    ],
+    null,
+    2
+  ) + "\n"
+);
+writeFileSync(
+  join(out, "logs/day-notes.json"),
+  JSON.stringify(
+    [
+      {
+        date: daysAgo(1),
+        text: "Did 3 sets of pushups at home. Not logged anywhere.",
+        trained: true,
+        logged_at: `${daysAgo(1)}T23:00:00.000Z`,
+      },
+    ],
+    null,
+    2
+  ) + "\n"
+);
+
 // Today's brief, from the template.
 for (const ext of ["json", "md"]) {
   const text = readFileSync(join(fixtures, `brief-template.${ext}`), "utf8").replaceAll("{{DATE}}", today);

@@ -137,18 +137,14 @@ export function renderMarkdown(md: string): string {
 }
 
 /**
- * Split the brief into the part shown open and the part behind the disclosure.
- *
- * The routine writes "## Injury flags" and "## Frequency" last; those belong in the
- * collapsed block beside the injury-note field. Everything else is the coaching read.
- * If those headings aren't present (an older brief), it all stays visible.
+ * The brief's prose for the Coaching tab: every section, including how injuries
+ * shaped the day, minus the H1 title (the page already shows the date).
  */
-export function splitBrief(md: string): { coaching: string; injury: string } {
-  const lines = md.replace(/\r\n/g, "\n").split("\n");
-  const cut = lines.findIndex((l) => /^##\s+(injury|frequency)/i.test(l));
-  if (cut === -1) return { coaching: md, injury: "" };
-
-  // Drop the H1 title - the page already shows the date.
-  const head = lines.slice(0, cut).filter((l) => !/^#\s/.test(l));
-  return { coaching: head.join("\n").trim(), injury: lines.slice(cut).join("\n").trim() };
+export function briefBody(md: string): string {
+  return md
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .filter((l) => !/^#\s/.test(l))
+    .join("\n")
+    .trim();
 }

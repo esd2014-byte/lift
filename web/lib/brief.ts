@@ -7,6 +7,10 @@ import { parseLog, type WorkoutEntry } from "./workouts";
 import { fillLoads, guessInputs, GUESS_PATHS } from "./loadGuess";
 import type { BriefData } from "./types";
 import type { DigestSession, VoltraSession } from "./metrics";
+import { parseProgram, programBriefs, type Program } from "./programDay";
+import { parseInjuries, type Injury } from "./injuries";
+import { parseDayNotes, type DayNote } from "./dayNotes";
+import { parseGoals, type Goals } from "./goals";
 
 /**
  * Everything the home page needs, read from the repo.
@@ -36,6 +40,8 @@ export type DayState = {
     days: number;
     /** The most recent weight before today, for a hint that can't be mistaken for today's entry. */
     last: { date: string; weight: number } | null;
+    /** The first weight logged once the program started, the baseline for the goal. */
+    atStart: { date: string; weight: number } | null;
   };
   measurements: { lastDate: string | null; daysSince: number | null };
   photos: { lastDate: string | null; daysSince: number | null };
@@ -43,6 +49,12 @@ export type DayState = {
   /** { A: "Push", B: "Pull", ... } - used to name the Hevy routine a variant points at. */
   dayNames: Record<string, string>;
   workouts: WorkoutEntry[];
+  /** Every program day, built from the program with loads from history: the off-plan choices. */
+  programDays: Record<string, BriefData>;
+  program: Program | null;
+  goals: Goals | null;
+  injuries: Injury[];
+  dayNotes: DayNote[];
 };
 
 function daysBetween(a: string, b: string) {
@@ -85,6 +97,9 @@ export async function loadDay(): Promise<DayState> {
       "logs/rest-days.json",
       "program/current.yaml",
       "logs/workouts.json",
+      "logs/injuries.json",
+      "logs/day-notes.json",
+      "athlete/profile.yaml",
       ...GUESS_PATHS,
     ],
     ["logs/photos"]
@@ -108,7 +123,14 @@ export async function loadDay(): Promise<DayState> {
   // Model-written: checked and bounded before anything renders or pushes it.
   const checked = briefDate ? checkBrief(parseJson<unknown>(files[`logs/briefs/${briefDate}.json`])) : null;
   // Voltra rows without a load get a calibration guess from lift history.
-  const briefData = checked?.brief ? fillLoads(checked.brief, guessInputs(files)) : null;
+  const guesses = guessInputs(files);
+  const briefData = checked?.brief ? fillLoads(checked.brief, guesses) : null;
+  const programDays = Object.fromEntries(
+    Object.entries(programBriefs(programRaw, files["library/exercises.yaml"] ?? null, today)).map(([id, b]) => [
+      id,
+      fillLoads(b, guesses, { anyRow: true }),
+    ])
+  );
   if (checked?.problems.length) console.warn(`brief ${briefDate}: ${checked.problems.join("; ")}`);
 
   // Bodyweight: one row per day; a skipped day is recorded as "skip" so the app
@@ -118,6 +140,9 @@ export async function loadDay(): Promise<DayState> {
   let rolling7: number | null = null;
   let days = 0;
   let last: { date: string; weight: number } | null = null;
+  let atStart: { date: string; weight: number } | null = null;
+  const program = parseProgram(programRaw);
+  const programStart = program?.meta.starts ? String(program.meta.starts).slice(0, 10) : null;
   if (bwCsv) {
     const rows = bwCsv.trimEnd().split("\n").slice(1).filter(Boolean);
     const mine = rows.find((r) => r.startsWith(`${today},`));
@@ -131,6 +156,15 @@ export async function loadDay(): Promise<DayState> {
       if (date < today && Number(v) > 0) {
         last = { date, weight: Number(v) };
         break;
+      }
+    }
+    if (programStart) {
+      for (const row of rows) {
+        const [date, v] = row.split(",");
+        if (date >= programStart && Number(v) > 0) {
+          atStart = { date, weight: Number(v) };
+          break;
+        }
       }
     }
     const r = rollingAverage(rows, today);
@@ -161,11 +195,16 @@ export async function loadDay(): Promise<DayState> {
     voltraSessions: voltra?.sessions ?? [],
     voltraSyncedAt: voltra?.synced_at ?? null,
     voltraUnnamed: voltra?.unnamed_count ?? 0,
-    bodyweight: { logged, skipped, rolling7, days, last },
+    bodyweight: { logged, skipped, rolling7, days, last, atStart },
     measurements: { lastDate: lastMeas, daysSince: lastMeas ? daysBetween(lastMeas, today) : null },
     photos: { lastDate: lastPhoto, daysSince: lastPhoto ? daysBetween(lastPhoto, today) : null },
     restDays: (restLog ?? []).map((r) => r.date),
     dayNames,
     workouts: parseLog(workoutsRaw),
+    programDays,
+    program,
+    goals: parseGoals(files["athlete/profile.yaml"] ?? null),
+    injuries: parseInjuries(files["logs/injuries.json"] ?? null),
+    dayNotes: parseDayNotes(files["logs/day-notes.json"] ?? null),
   };
 }

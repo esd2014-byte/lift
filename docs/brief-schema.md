@@ -4,7 +4,7 @@ The morning routine writes **two files** per day into `logs/briefs/`:
 
 | File | Purpose | Read by |
 |---|---|---|
-| `YYYY-MM-DD.md` | Coaching prose | The app's Coaching section |
+| `YYYY-MM-DD.md` | Coaching prose, all of it shown under "Why today" | The app's Coaching tab |
 | `YYYY-MM-DD.json` | Structured session + variants | The app's variant buttons and program table |
 
 The app degrades gracefully: a day with only `.md` shows the coaching text and hides
@@ -98,3 +98,19 @@ writes them as `Day A — Push`, `Day F — Prehab + Core + Conditioning (short)
 
 Omit a variant entirely rather than inventing a hollow one. The app renders whatever
 is present, in the order full → beast → minimum → travel.
+
+## What the athlete tells the coach
+
+Two logs the app writes and the routine reads before the digests:
+
+- `logs/day-notes.json`: `[{date, text, trained, logged_at}]`, appended. His own
+  account of a day. It says what the device data means (a calibration run Beyond+
+  saved as four sessions), or records work nothing logged. `trained: true` counts
+  the day toward the streak.
+- `logs/injuries.json`: `[{id, title, started, status, resolved_at, updates:
+  [{at, text}]}]`. Active injuries are live constraints; the latest update wins.
+  The standing rules in `athlete/injuries.yaml` sit under the same id and apply only
+  while that injury is active.
+
+`logs/variants.json` and `logs/workouts.json` carry `off_plan: true` and the `day`
+when he trained a program day other than the brief's.
