@@ -532,11 +532,26 @@ th:last-child {
   padding: 11px 0 11px 0;
   border-top: 1px solid var(--border);
 }
-/* Superset members share an accent rail on the left. */
-.ex.inset {
-  padding-left: 11px;
-  border-left: 3px solid var(--accent-soft);
-  box-shadow: inset 3px 0 0 var(--accent);
+/* A superset is one boxed group with an accent rail, and groups sit apart, so two
+   supersets in a row read as two. */
+.ssgroup {
+  margin: 10px 0;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  background: var(--surface);
+  padding: 0 11px;
+}
+.ssgroup > ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ssgroup .ex:first-child {
+  border-top: 0;
+}
+.ssgroup + .ex {
+  border-top: 0;
 }
 .exhead {
   display: flex;
@@ -563,28 +578,44 @@ th:last-child {
   color: var(--muted);
 }
 .ss {
-  color: var(--accent);
-  font-weight: 600;
-  font-size: 0.7rem;
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 0.68rem;
   font-family: var(--font-display), sans-serif;
+  align-self: center;
 }
 .station {
   font-size: 0.72rem;
   color: var(--muted);
 }
+/* Calibration is a different idea from a superset, so it looks different: a dashed
+   amber box under the row, never a left rail. */
 .calib {
-  margin-top: 6px;
+  margin-top: 7px;
   font-size: 0.78rem;
   line-height: 1.45;
   color: var(--ink-2);
-  border-left: 2px solid var(--due);
-  padding-left: 8px;
+  background: var(--due-soft);
+  border: 1px dashed var(--due);
+  border-radius: 8px;
+  padding: 7px 9px;
 }
 .guess {
-  font-size: 0.66rem;
+  font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--due);
+  border: 1px dashed var(--due);
+  border-radius: 999px;
+  padding: 1px 6px;
+  margin-left: 6px;
+  vertical-align: 1px;
   font-family: var(--font-display), sans-serif;
   font-weight: 600;
 }
@@ -1256,4 +1287,65 @@ textarea.reason.small {
   font-size: 0.74rem;
   color: var(--muted);
   padding-top: 2px;
+}
+
+/* ---- program tab --------------------------------------------------- */
+.rotation .rname .rlast {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--muted);
+  font-family: var(--font-mono), monospace;
+}
+.rotation li.now .rlast {
+  color: var(--ink-2);
+}
+.card.lastsession {
+  margin-top: 8px;
+}
+.card.lastsession .facts {
+  font-size: 0.84rem;
+}
+.session-sub {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+.facts .muted {
+  color: var(--muted);
+  list-style: none;
+}
+.questions {
+  list-style: none;
+  margin: 8px 0 4px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+button.question {
+  width: 100%;
+  text-align: left;
+  min-height: 44px;
+  font: inherit;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  cursor: pointer;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  color: var(--ink);
+}
+button.question::before {
+  content: "?" / "";
+  font-family: var(--font-display), sans-serif;
+  font-weight: 700;
+  color: var(--accent);
+  margin-right: 8px;
+}
+button.question[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+button.question[aria-pressed="true"]::before {
+  color: var(--accent-ink);
 }

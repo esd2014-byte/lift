@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "node test/markdown.test.mjs && node test/library.test.mjs && node test/metrics.test.mjs && node test/workout.test.mjs && node test/github.test.mjs && node test/security.test.mjs && node test/voltra.test.mjs && node test/loadGuess.test.mjs && tsx --test test/routes.test.ts",
+    "test": "node test/markdown.test.mjs && node test/library.test.mjs && node test/metrics.test.mjs && node test/workout.test.mjs && node test/github.test.mjs && node test/security.test.mjs && node test/voltra.test.mjs && node test/loadGuess.test.mjs && tsx --test test/routes.test.ts test/recent.test.ts",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm test"
   },
   "dependencies": {

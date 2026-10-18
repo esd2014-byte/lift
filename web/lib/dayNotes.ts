@@ -16,6 +16,8 @@ export type DayNote = {
   /** Count this date as a training day, whatever the logs say. */
   trained: boolean;
   logged_at: string;
+  /** The question from the logs this note answers, when it answers one. */
+  question?: string;
 };
 
 export const MAX_NOTE_TEXT = 2000;

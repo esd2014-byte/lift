@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { BriefData, Variant } from "@/lib/types";
+import type { BriefData, Row, Variant } from "@/lib/types";
 import type { WorkoutEntry } from "@/lib/workouts";
 import { didntSave, postJson } from "@/lib/postJson";
 import { dayTitle, hevyTitle, isVoltraRow, variantName, voltraTitle, workoutDay } from "@/lib/session";
@@ -477,7 +477,59 @@ export default function Today({
             </p>
           )}
 
+          {/* ---- the session ---- */}
+          {offPlan && (
+            <div className="callout warn" style={{ marginTop: 14 }}>
+              <b>Off-plan: Day {pickedDay} as the program writes it.</b> The coach&apos;s adjustments for today
+              aren&apos;t in it: no injury swaps, no extra RPE caps, no swaps for lifts you dislike.
+              {activeInjuries.length > 0 && <> Go by feel around: {activeInjuries.join("; ")}.</>} Tomorrow&apos;s brief
+              sees what you picked.
+            </div>
+          )}
+          {v.note && (
+            <div className={`callout ${v.note.kind}`} style={{ marginTop: 14 }}>
+              {v.note.text}
+            </div>
+          )}
+          {calibrating > 0 && (
+            <div className="callout warn" style={{ marginTop: 10 }}>
+              <b>Calibration day for {calibrating === 1 ? "one lift" : `${calibrating} lifts`}.</b>{" "}
+              {offPlan ? "The program has no weights" : "The brief didn't set them"}, so Lift guessed from your history.
+              Each is marked below: treat set 1 as a feeler, adjust, and log what you finish on.
+            </div>
+          )}
+          {/* One card row per exercise: at 360px a four-column table squeezed the names
+              and notes into a strip. A superset is its own boxed group, so two supersets in
+              a row read as two, not one long rail. */}
+          <ol className="exlist">
+            {groups(v.rows).map((g, gi) =>
+              g.superset ? (
+                <li key={gi} className="ssgroup" aria-label={`Superset ${g.superset}`}>
+                  <ol>
+                    {g.rows.map((r, i) => (
+                      <ExRow key={i} r={r} />
+                    ))}
+                  </ol>
+                </li>
+              ) : (
+                <ExRow key={gi} r={g.rows[0]} />
+              )
+            )}
+          </ol>
+
           {/* ---- where to log it ---- */}
+          <p className="handoff" style={{ marginTop: 16 }}>
+            {hevyRows > 0 && voltraRows > 0 ? (
+              <>
+                <b>{hevyRows}</b> in Hevy, <b>{voltraRows}</b> on the Voltra. In a superset, do the cable set, then the
+                dumbbell set during the Voltra&apos;s rest, and tick it in Hevy.
+              </>
+            ) : voltraRows > 0 ? (
+              <>Everything today is on the Voltra.</>
+            ) : (
+              <>Everything today is logged in Hevy.</>
+            )}
+          </p>
           <div className="launch" style={{ marginTop: 10 }}>
             {hevyRows > 0 ? (
               <a className="launchbtn" href="hevy://" target="_blank" rel="noreferrer">
@@ -529,86 +581,60 @@ export default function Today({
               but not toward strength. Start from the named session instead of free mode.
             </p>
           )}
-
-          {/* ---- the session ---- */}
-          {offPlan && (
-            <div className="callout warn" style={{ marginTop: 14 }}>
-              <b>Off-plan: Day {pickedDay} as the program writes it.</b> The coach&apos;s adjustments for today
-              aren&apos;t in it: no injury swaps, no extra RPE caps, no swaps for lifts you dislike.
-              {activeInjuries.length > 0 && <> Go by feel around: {activeInjuries.join("; ")}.</>} Tomorrow&apos;s brief
-              sees what you picked.
-            </div>
-          )}
-          {v.note && (
-            <div className={`callout ${v.note.kind}`} style={{ marginTop: 14 }}>
-              {v.note.text}
-            </div>
-          )}
-          {calibrating > 0 && (
-            <div className="callout warn" style={{ marginTop: 10 }}>
-              <b>Calibration day for {calibrating === 1 ? "one lift" : `${calibrating} lifts`}.</b>{" "}
-              {offPlan ? "The program has no weights" : "The brief didn't set them"}, so Lift guessed from your history.
-              Each is marked below: treat set 1 as a feeler, adjust, and log what you finish on.
-            </div>
-          )}
-          <p className="handoff">
-            {hevyRows > 0 && voltraRows > 0 ? (
-              <>
-                <b>{hevyRows}</b> in Hevy, <b>{voltraRows}</b> on the Voltra. In a superset, do the cable set, then the
-                dumbbell set during the Voltra&apos;s rest, and tick it in Hevy.
-              </>
-            ) : voltraRows > 0 ? (
-              <>Everything today is on the Voltra.</>
-            ) : (
-              <>Everything today is logged in Hevy.</>
-            )}
-          </p>
-          {/* One card row per exercise: at 360px a four-column table squeezed the names
-              and notes into a strip. Numbers get their own line; notes run full width. */}
-          <ol className="exlist">
-            {v.rows.map((r, i) => {
-              const where = isVoltraRow(r) ? "Voltra" : "Hevy";
-              return (
-                <li key={i} className={`ex${r.superset ? " inset" : ""}`}>
-                  <div className="exhead">
-                    {r.superset && (
-                      <span className="ss" aria-label={`Superset ${r.superset}`}>
-                        {r.superset}
-                      </span>
-                    )}
-                    <span className="exname">{r.name}</span>
-                  </div>
-                  <div className="station">
-                    <span className={`where ${where === "Voltra" ? "where-voltra" : "where-hevy"}`}>{where}</span>
-                    {r.station && <> · {r.station}</>}
-                  </div>
-                  <p className="exnums num">
-                    {typeof r.load_lb === "number" && (
-                      <>
-                        <b>{r.load_lb} lb</b>
-                        {r.calibration && <span className="guess">guess</span>}
-                        <span className="sep"> · </span>
-                      </>
-                    )}
-                    <b>{r.reps}</b>
-                    {r.rpe != null && r.rpe !== "" && (
-                      <>
-                        <span className="sep"> · </span>RPE <b>{r.rpe}</b>
-                      </>
-                    )}
-                  </p>
-                  {r.calibration && (
-                    <div className="calib">
-                      <b>Calibration:</b> {r.load_lb} lb is a guess ({r.calibration.basis}). After set 1, go up 5–10 lb
-                      if it felt easier than RPE {r.calibration.rpe}, down if harder.
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
         </div>
       )}
     </section>
+  );
+}
+
+/** Consecutive rows sharing a superset letter, kept together; standalone rows alone. */
+function groups(rows: Row[]): Array<{ superset: string | null; rows: Row[] }> {
+  const out: Array<{ superset: string | null; rows: Row[] }> = [];
+  for (const r of rows) {
+    const last = out.at(-1);
+    if (r.superset && last?.superset === r.superset) last.rows.push(r);
+    else out.push({ superset: r.superset ?? null, rows: [r] });
+  }
+  return out;
+}
+
+function ExRow({ r }: { r: Row }) {
+  const where = isVoltraRow(r) ? "Voltra" : "Hevy";
+  return (
+    <li className="ex">
+      <div className="exhead">
+        {r.superset && (
+          <span className="ss" aria-hidden="true">
+            {r.superset}
+          </span>
+        )}
+        <span className="exname">{r.name}</span>
+      </div>
+      <div className="station">
+        <span className={`where ${where === "Voltra" ? "where-voltra" : "where-hevy"}`}>{where}</span>
+        {r.station && <> · {r.station}</>}
+      </div>
+      <p className="exnums num">
+        {typeof r.load_lb === "number" && (
+          <>
+            <b>{r.load_lb} lb</b>
+            {r.calibration && <span className="guess">calibrating</span>}
+            <span className="sep"> · </span>
+          </>
+        )}
+        <b>{r.reps}</b>
+        {r.rpe != null && r.rpe !== "" && (
+          <>
+            <span className="sep"> · </span>RPE <b>{r.rpe}</b>
+          </>
+        )}
+      </p>
+      {r.calibration && (
+        <div className="calib">
+          {r.load_lb} lb is a starting guess ({r.calibration.basis}). After set 1, go up 5–10 lb if it felt easier than
+          RPE {r.calibration.rpe}, down if harder.
+        </div>
+      )}
+    </li>
   );
 }
