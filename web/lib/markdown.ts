@@ -148,3 +148,18 @@ export function briefBody(md: string): string {
     .join("\n")
     .trim();
 }
+
+/** The brief's body split at an optional "## More" section, which the app collapses. */
+export function briefParts(md: string): { main: string; more: string } {
+  const body = briefBody(md);
+  const lines = body.split("\n");
+  const cut = lines.findIndex((l) => /^##\s+more\b/i.test(l));
+  if (cut === -1) return { main: body, more: "" };
+  return {
+    main: lines.slice(0, cut).join("\n").trim(),
+    more: lines
+      .slice(cut + 1)
+      .join("\n")
+      .trim(),
+  };
+}

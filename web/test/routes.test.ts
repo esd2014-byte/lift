@@ -172,6 +172,12 @@ test("day notes: appended; a trained note counts toward the streak", async () =>
   assert.equal(day.dayNotes.length, 2);
   assert.equal((await call(dayNote, { text: "" })).status, 400);
   assert.equal((await call(dayNote, { text: "x", when: "last week" })).status, 400);
+  const twoBack = new Date(Date.parse(`${today}T12:00:00Z`) - 2 * 86400000).toISOString().slice(0, 10);
+  const r3 = await call(dayNote, { text: "one workout", date: twoBack, question: "One workout, or several?" });
+  assert.equal(r3.status, 200);
+  assert.equal((r3.json.note as { question: string }).question, "One workout, or several?");
+  const threeBack = new Date(Date.parse(`${today}T12:00:00Z`) - 3 * 86400000).toISOString().slice(0, 10);
+  assert.equal((await call(dayNote, { text: "x", date: threeBack })).status, 400);
 });
 
 // ---- tolerance ratings ----------------------------------------------------------------

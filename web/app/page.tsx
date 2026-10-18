@@ -5,7 +5,7 @@ import { GitHubError, tokenExpiry } from "@/lib/github";
 import { computeMetrics, mergeSources } from "@/lib/metrics";
 import { trainedDates } from "@/lib/workouts";
 import { prettyDate, ZONE } from "@/lib/date";
-import { briefBody, renderMarkdown } from "@/lib/markdown";
+import { briefParts, renderMarkdown } from "@/lib/markdown";
 import Freshness from "./Freshness";
 import SyncStatus from "./SyncStatus";
 import WeekStrip from "./WeekStrip";
@@ -13,11 +13,12 @@ import Strength from "./Strength";
 import Motivation from "./Motivation";
 import Tabs from "./Tabs";
 import Injuries from "./Injuries";
-import DayNotes from "./DayNotes";
 import { noteTrainedDates } from "@/lib/dayNotes";
 import Body from "./Body";
 import Today from "./Today";
-import Coaching from "./Coaching";
+import Program from "./Program";
+import Goal from "./Goal";
+import { lastSession, lastTrainedByDay, noteDates, questions } from "@/lib/recent";
 import { workoutDay } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -91,7 +92,7 @@ export default async function Page() {
   const liftDates = [...trainedDates(state.workouts), ...noteTrainedDates(state.dayNotes)];
   const merged = mergeSources(state.sessions, state.voltraSessions, liftDates);
   const metrics = computeMetrics(merged, state.today, state.restDays);
-  const yesterday = new Date(Date.parse(`${state.today}T12:00:00Z`) - 86400000).toISOString().slice(0, 10);
+  const brief = state.briefMarkdown ? briefParts(state.briefMarkdown) : null;
   const activeInjuries = state.injuries.filter((i) => i.status === "active").map((i) => i.title);
 
   const within = (date: string, days: number) =>
@@ -123,7 +124,7 @@ export default async function Page() {
           <b>No session to start from this brief.</b>
           <div style={{ marginTop: 6 }}>
             Its workout list is missing or couldn&apos;t be read, so the Start button can&apos;t set anything up. The
-            coach&apos;s plan is in the Coaching tab.
+            coach&apos;s plan is in the Program tab.
           </div>
         </div>
       ) : (
@@ -160,11 +161,26 @@ export default async function Page() {
           {
             id: "today",
             label: "Today's pumps",
+            content: todayTab,
+          },
+          {
+            id: "program",
+            label: "Program",
             content: (
-              <>
-                {todayTab}
-                <DayNotes notes={state.dayNotes} today={state.today} yesterday={yesterday} />
-              </>
+              <Program
+                html={brief ? renderMarkdown(brief.main) : ""}
+                moreHtml={brief?.more ? renderMarkdown(brief.more) : ""}
+                workoutDay={state.briefData ? workoutDay(state.briefData, state.dayNames) : null}
+                todayDay={state.briefData?.day ?? null}
+                program={state.program}
+                metrics={metrics}
+                lastByDay={lastTrainedByDay(state.workouts, state.sessions, state.today)}
+                last={lastSession(state.sessions, state.voltraSessions, state.workouts, state.today)}
+                notes={state.dayNotes}
+                noteDates={noteDates(state.today)}
+                questions={questions(state.sessions, state.voltraSessions, state.workouts, state.dayNotes, state.today)}
+                today={state.today}
+              />
             ),
           },
           {
@@ -172,6 +188,7 @@ export default async function Page() {
             label: "Progress",
             content: (
               <>
+                <Goal goals={state.goals} bodyweight={state.bodyweight} today={state.today} />
                 <Strength m={metrics} />
                 <Body state={state} />
                 <p className="sub" style={{ paddingBottom: 8 }}>
@@ -181,22 +198,6 @@ export default async function Page() {
                   : tell the coach what to program more, or never.
                 </p>
               </>
-            ),
-          },
-          {
-            id: "coaching",
-            label: "Coaching",
-            content: (
-              <Coaching
-                html={state.briefMarkdown ? renderMarkdown(briefBody(state.briefMarkdown)) : ""}
-                workoutDay={state.briefData ? workoutDay(state.briefData, state.dayNames) : null}
-                todayDay={state.briefData?.day ?? null}
-                program={state.program}
-                goals={state.goals}
-                metrics={metrics}
-                bodyweight={state.bodyweight}
-                today={state.today}
-              />
             ),
           },
           {
