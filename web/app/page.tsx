@@ -19,6 +19,8 @@ import Today from "./Today";
 import Program from "./Program";
 import Goal from "./Goal";
 import Gym from "./Gym";
+import { activeTrip } from "@/lib/trips";
+import { HOTEL_GYMS } from "@/lib/programDay";
 import { lastSession, lastTrainedByDay, noteDates, questions } from "@/lib/recent";
 import { workoutDay } from "@/lib/session";
 
@@ -94,6 +96,7 @@ export default async function Page() {
   const merged = mergeSources(state.sessions, state.voltraSessions, liftDates);
   const metrics = computeMetrics(merged, state.today, state.restDays);
   const brief = state.briefMarkdown ? briefParts(state.briefMarkdown) : null;
+  const trip = activeTrip(state.trips, state.today);
   const activeInjuries = state.injuries.filter((i) => i.status === "active").map((i) => i.title);
 
   const within = (date: string, days: number) =>
@@ -108,6 +111,18 @@ export default async function Page() {
       data={state.briefData}
       programDays={state.programDays}
       activeInjuries={activeInjuries}
+      trip={
+        trip
+          ? {
+              to: trip.to,
+              place: trip.place,
+              gymName: HOTEL_GYMS[trip.gym.type],
+              planned: ((d) => (d === "rest" ? "rest" : d ? `Day ${d} — ${state.dayNames[d] ?? d}` : null))(
+                trip.days.find((x) => x.date === state.today)?.day
+              ),
+            }
+          : null
+      }
       dayNames={state.dayNames}
       today={state.today}
       stale={state.stale}
@@ -204,7 +219,15 @@ export default async function Page() {
           {
             id: "gym",
             label: "Gym",
-            content: <Gym equipment={state.gym.equipment} exercises={state.gym.exercises} />,
+            content: (
+              <Gym
+                equipment={state.gym.equipment}
+                exercises={state.gym.exercises}
+                trips={state.trips}
+                today={state.today}
+                dayNames={state.dayNames}
+              />
+            ),
           },
           {
             id: "injury",

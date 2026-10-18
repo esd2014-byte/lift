@@ -131,5 +131,11 @@ Two logs the app writes and the routine reads before the digests:
   The standing rules in `athlete/injuries.yaml` sit under the same id and apply only
   while that injury is active.
 
+- `logs/trips.json`: `[{id, from, to, place?, gym: {type, db_max_lb, kettlebells},
+  days: [{date, day}]}]`. Trips planned in the app. `gym.type` is one of
+  `machines_cardio`, `full_gym`, `db_only`, `bodyweight`; `day` is a program day letter
+  or `rest`. On a trip day, the pick is that day's planned session, converted for that
+  hotel gym; a planned `rest` is a rest day, not a miss.
+
 `logs/variants.json` and `logs/workouts.json` carry `off_plan: true` and the `day`
 when he trained a program day other than the brief's.

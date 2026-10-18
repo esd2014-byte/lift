@@ -22,6 +22,7 @@ import { POST as restDay } from "@/app/api/rest-day/route";
 import { POST as injuries } from "@/app/api/injuries/route";
 import { POST as dayNote } from "@/app/api/day-note/route";
 import { POST as gym } from "@/app/api/gym/route";
+import { POST as trips } from "@/app/api/trips/route";
 import { POST as tolerance } from "@/app/api/tolerance/route";
 import { POST as workout } from "@/app/api/workout/route";
 import { POST as photo } from "@/app/api/photo/route";
@@ -75,7 +76,7 @@ async function call(
 
 // ---- auth: every write route refuses a request without a session --------------------
 test("every write route 404s without a session", async () => {
-  for (const h of [bodyweight, measurements, restDay, injuries, dayNote, gym, tolerance, workout, photo]) {
+  for (const h of [bodyweight, measurements, restDay, injuries, dayNote, gym, trips, tolerance, workout, photo]) {
     const r = await call(h, {}, { authed: false });
     assert.equal(r.status, 404);
   }
@@ -209,6 +210,40 @@ test("gym: equipment edits keep the file's comments, and bad ones are refused", 
   assert.equal((await call(gym, { action: "nuobell", min: 90, max: 80, step: 5 })).status, 400);
   assert.equal((await call(gym, { action: "list_remove", list: "accessories", item: "anvil" })).status, 400);
   assert.equal((await call(gym, { action: "explode" })).status, 400);
+});
+
+// ---- trips --------------------------------------------------------------------------------
+test("trips: a trip from today starts at today's coach pick and converts Traveling for the hotel", async () => {
+  const to = new Date(Date.parse(`${today}T12:00:00Z`) + 3 * 86400000).toISOString().slice(0, 10);
+  const r = await call(trips, {
+    action: "create",
+    from: today,
+    to,
+    place: "Denver",
+    gym: { type: "db_only", db_max_lb: 50, kettlebells: false },
+  });
+  assert.equal(r.status, 200);
+  const trip = r.json.trip as { id: string; days: Array<{ date: string; day: string }> };
+  // Today's brief is Day A; the rotation is A, B, C.
+  assert.deepEqual(
+    trip.days.map((d) => d.day),
+    ["A", "B", "C", "A"]
+  );
+  const overlap = await call(trips, { action: "create", from: to, to, gym: { type: "bodyweight" } });
+  assert.equal(overlap.status, 409);
+
+  assert.equal((await call(trips, { action: "set_day", id: trip.id, date: today, day: "rest" })).status, 200);
+  assert.equal((await call(trips, { action: "set_day", id: trip.id, date: today, day: "Z" })).status, 400);
+  const day = await loadDay();
+  assert.equal(day.trips.length, 1);
+  assert.ok(day.restDays.includes(today), "a planned rest day on a trip is rest");
+  assert.match(day.programDays.B.variants.travel.meta, /dumbbells only/);
+
+  // Started today, so "back home" cancels it outright.
+  assert.equal((await call(trips, { action: "end", id: trip.id })).status, 200);
+  assert.deepEqual(JSON.parse(file("logs/trips.json")), []);
+  assert.equal((await call(trips, { action: "end", id: "nope" })).status, 404);
+  assert.equal((await call(trips, { action: "create", from: today, to: today, gym: { type: "spa" } })).status, 400);
 });
 
 // ---- tolerance ratings ----------------------------------------------------------------

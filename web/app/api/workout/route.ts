@@ -16,6 +16,7 @@ import { withGuessedLoads } from "@/lib/loadGuess";
 import { upsertJsonDay } from "@/lib/dailyLog";
 import { programBriefs } from "@/lib/programDay";
 import { missingStations, readEquipment } from "@/lib/gym";
+import { activeTrip, parseTrips } from "@/lib/trips";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -62,16 +63,23 @@ async function handlePOST(req: NextRequest) {
         // A program day other than the coach's pick: the coach's own version of it
         // when today's brief wrote one, otherwise built by rule from the program.
         const date = /^\d{4}-\d{2}-\d{2}$/.test(body.briefDate ?? "") ? body.briefDate! : today;
-        const [programRaw, libraryRaw, travelRaw, briefRaw, equipmentRaw] = await Promise.all([
+        const [programRaw, libraryRaw, travelRaw, briefRaw, equipmentRaw, tripsRaw] = await Promise.all([
           readFile("program/current.yaml"),
           readFile("library/exercises.yaml"),
           readFile("program/travel.yaml"),
           readFile(`logs/briefs/${date}.json`),
           readFile("gym/equipment.yaml"),
+          readFile("logs/trips.json"),
         ]);
         const checked = briefRaw ? checkBrief(JSON.parse(briefRaw)).brief : null;
         const unavailable = missingStations(readEquipment(equipmentRaw));
-        const plan = programBriefs(programRaw, libraryRaw, today, { brief: checked, travelRaw, unavailable })[body.day];
+        const trip = activeTrip(parseTrips(tripsRaw), today);
+        const plan = programBriefs(programRaw, libraryRaw, today, {
+          brief: checked,
+          travelRaw,
+          unavailable,
+          ...(trip ? { hotel: trip.gym } : {}),
+        })[body.day];
         if (!plan) return NextResponse.json({ error: `no Day ${body.day} in the program` }, { status: 404 });
         if (!plan.variants[variant]) return NextResponse.json({ error: "variant not in that day" }, { status: 400 });
         brief = await withGuessedLoads({ ...plan, date: today }, { anyRow: plan.source === "program" });
