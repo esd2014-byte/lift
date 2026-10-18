@@ -131,7 +131,7 @@ export default async function Page() {
         <div className="callout info">
           <b>No brief yet.</b>
           <div style={{ marginTop: 6 }}>
-            The coach writes one every morning, around 6 to 7 AM. If it isn&apos;t here by 8,{" "}
+            The coach writes one every morning around 5 AM, with a retry at 6. If it isn&apos;t here by 7,{" "}
             <a className="tap" href="/api/diagnostics">
               diagnostics
             </a>{" "}

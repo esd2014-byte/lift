@@ -1,9 +1,10 @@
 /**
  * Everything in this app is anchored to the athlete's local day, not UTC.
  *
- * This matters more than it looks: the cloud routine's cron is UTC-only, so in
- * winter the brief is generated at 6am local rather than 7am. The app must still
- * agree with the athlete about what "today" is.
+ * This matters more than it looks: the crons are UTC-only, so the same UTC hour is
+ * a different local hour in summer and winter (the morning routine checks the New
+ * York hour itself to stay at 5am). The app must agree with the athlete about what
+ * "today" is.
  *
  * The zone is APP_TIMEZONE (an IANA name, e.g. "Europe/London"), so travelling means
  * changing one setting, not the code. Unset or invalid falls back to New York.

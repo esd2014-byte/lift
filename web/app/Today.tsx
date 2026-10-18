@@ -430,7 +430,7 @@ export default function Today({
                 {(ended?.syncs ?? []).map((s) => (
                   <div key={s.source}>
                     {s.source === "hevy" ? "Hevy" : "Voltra"}:{" "}
-                    {s.ok ? "synced ✓" : `sync failed (${s.error}). The 6am sync will retry.`}
+                    {s.ok ? "synced ✓" : `sync failed (${s.error}). The early-morning sync will retry.`}
                   </div>
                 ))}
               </div>
