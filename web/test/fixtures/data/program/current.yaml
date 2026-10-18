@@ -6,9 +6,9 @@ meta:
   block_length_weeks: 4
 
 structure:
-  days_per_week: 2
+  days_per_week: 3
   real_days: [A, B]
-  short_days: []
+  short_days: [C]
 
 days:
   A:
@@ -26,6 +26,13 @@ days:
       - {slot: 1, superset: [cable_pulldown, db_row], sets: 4, reps: [8, 12], rpe: 8}
       - {slot: 2, exercise: dead_bug, sets: 3, reps: [10, 10], rpe: 7, droppable: true}
     note: Pull day. Rows before the core work.
+
+  C:
+    name: Core (short)
+    type: short
+    minutes: [15, 20]
+    blocks:
+      - {slot: 1, exercise: dead_bug, sets: 3, reps: [10, 12], rpe: 7}
 
 testing:
   next: 2030-01-29

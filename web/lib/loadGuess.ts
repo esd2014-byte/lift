@@ -187,6 +187,11 @@ export function guessRow(
 export function fillLoads(brief: BriefData, input: GuessInputs, opts: { anyRow?: boolean } = {}): BriefData {
   const variants: BriefData["variants"] = {};
   for (const [key, v] of Object.entries(brief.variants ?? {})) {
+    // A Traveling session is done on a hotel's equipment: home history doesn't transfer.
+    if (opts.anyRow && key === "travel") {
+      variants[key] = v;
+      continue;
+    }
     variants[key] = {
       ...v,
       rows: v.rows.map((row) => {

@@ -1,4 +1,4 @@
-import { VARIANT_ORDER, type BriefData, type Row, type Variant } from "./types";
+import { VARIANT_ORDER, type Alternate, type BriefData, type Row, type Variant } from "./types";
 
 /**
  * The brief's JSON is written by a model every morning. Treat it like any other
@@ -56,6 +56,40 @@ function variant(v: unknown, problems: string[], key: string): Variant | null {
   };
 }
 
+function variantsOf(vIn: Record<string, unknown>, problems: string[], prefix = ""): Record<string, Variant> {
+  const variants: Record<string, Variant> = {};
+  for (const k of VARIANT_ORDER) {
+    if (!(k in vIn)) continue;
+    const v = variant(vIn[k], problems, prefix + k);
+    if (v) variants[k] = v;
+    else problems.push(`${prefix}${k}: unusable, dropped`);
+  }
+  return variants;
+}
+
+/** The coach's other full days. A bad one is dropped; it never sinks today's brief. */
+function alternates(raw: unknown, problems: string[]): Record<string, Alternate> | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const out: Record<string, Alternate> = {};
+  for (const [id, a] of Object.entries(raw as Record<string, unknown>).slice(0, 8)) {
+    if (!/^[A-Z]$/.test(id) || !a || typeof a !== "object") continue;
+    const x = a as Record<string, unknown>;
+    const vIn = (x.variants && typeof x.variants === "object" ? x.variants : {}) as Record<string, unknown>;
+    const variants = variantsOf(vIn, problems, `Day ${id} `);
+    if (!Object.keys(variants).length) {
+      problems.push(`Day ${id}: no usable variants, dropped`);
+      continue;
+    }
+    out[id] = {
+      day_name: str(x.day_name, 80) ?? `Day ${id}`,
+      day_type: x.day_type === "short" ? "short" : "real",
+      ...(str(x.headline, 300) ? { headline: str(x.headline, 300) } : {}),
+      variants,
+    };
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 export function checkBrief(raw: unknown): { brief: BriefData | null; problems: string[] } {
   const problems: string[] = [];
   if (!raw || typeof raw !== "object") return { brief: null, problems: ["not a JSON object"] };
@@ -68,14 +102,8 @@ export function checkBrief(raw: unknown): { brief: BriefData | null; problems: s
   if (!date) problems.push("missing or malformed date");
   if (!day) problems.push("missing or malformed day");
 
-  const variants: Record<string, Variant> = {};
   const vIn = (b.variants && typeof b.variants === "object" ? b.variants : {}) as Record<string, unknown>;
-  for (const k of VARIANT_ORDER) {
-    if (!(k in vIn)) continue;
-    const v = variant(vIn[k], problems, k);
-    if (v) variants[k] = v;
-    else problems.push(`${k}: unusable, dropped`);
-  }
+  const variants = variantsOf(vIn, problems);
   if (!Object.keys(variants).length) problems.push("no usable variants");
   if (!date || !day || !Object.keys(variants).length) return { brief: null, problems };
 
@@ -89,6 +117,7 @@ export function checkBrief(raw: unknown): { brief: BriefData | null; problems: s
       ...(str(b.headline, 300) ? { headline: str(b.headline, 300) } : {}),
       injury_flag: str(b.injury_flag, 300) ?? null,
       variants,
+      ...((alt) => (alt ? { alternates: alt } : {}))(alternates(b.alternates, problems)),
     },
     problems,
   };

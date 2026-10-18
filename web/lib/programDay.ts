@@ -44,7 +44,7 @@ export type Program = {
   nextTest: string | null;
 };
 
-type LibEntry = { name: string; station?: string; tolerance?: string };
+type LibEntry = { name: string; station?: string; tolerance?: string; status?: string };
 
 /** Program days in rotation order, plus the block and testing context around them. */
 export function parseProgram(raw: string | null): Program | null {
@@ -95,6 +95,7 @@ export function libraryEntries(raw: string | null): Map<string, LibEntry> {
         name: String(ex.name ?? ex.id),
         station: ex.station ? String(ex.station) : undefined,
         tolerance: ex.tolerance ? String(ex.tolerance) : undefined,
+        status: ex.status ? String(ex.status) : undefined,
       });
     }
   }
@@ -123,17 +124,21 @@ function repsText(b: ProgramBlock): string {
   return `${sets} sets`;
 }
 
+type RowOpts = { anchorExtraSets?: number; sets?: number };
+
 /** One row per exercise, supersets lettered A, B, C in program order. */
-export function programRows(day: ProgramDay, library: Map<string, LibEntry>): Row[] {
+export function programRows(blocks: ProgramBlock[], library: Map<string, LibEntry>, opts: RowOpts = {}): Row[] {
   const rows: Row[] = [];
   let letter = 0;
-  for (const b of day.blocks) {
+  for (const b0 of blocks) {
+    const sets = opts.sets ?? (b0.sets ?? 3) + (b0.anchor ? (opts.anchorExtraSets ?? 0) : 0);
+    const b = { ...b0, sets };
     const ids = b.superset?.length ? b.superset : b.exercise ? [b.exercise] : [];
     const ss = ids.length > 1 ? String.fromCharCode(65 + letter++) : null;
     for (const id of ids) {
       const lib = library.get(id);
       // Never program what the athlete has ruled out, even off-plan.
-      if (lib?.tolerance === "forbidden") continue;
+      if (lib?.tolerance === "forbidden" || lib?.status === "inactive" || lib?.status === "retired") continue;
       const notes = [
         b.anchor ? "anchor" : "",
         b.droppable ? "drop it if short on time" : "",
@@ -153,33 +158,170 @@ export function programRows(day: ProgramDay, library: Map<string, LibEntry>): Ro
   return rows;
 }
 
-/** A program day in the brief's own shape, so Today, Hevy and Beyond+ handle it unchanged. */
-export function programBrief(day: ProgramDay, library: Map<string, LibEntry>, date: string): BriefData {
+/** The hotel gym a Traveling session is converted for, until a trip says otherwise. */
+export type HotelGym = "machines_cardio" | "full_gym" | "db_only" | "bodyweight";
+export const DEFAULT_HOTEL: HotelGym = "machines_cardio";
+
+/** program/travel.yaml: library id -> { hotel gym type -> substitute }. */
+export function parseTravel(raw: string | null): Record<string, Partial<Record<HotelGym, string>>> {
+  try {
+    const doc = (parse(raw ?? "") ?? {}) as { substitution_map?: Record<string, Partial<Record<HotelGym, string>>> };
+    return doc.substitution_map ?? {};
+  } catch {
+    return {};
+  }
+}
+
+const HOTEL_HINT: Record<HotelGym, string> = {
+  machines_cardio: "the nearest machine or cable station",
+  full_gym: "the barbell or cable version",
+  db_only: "a dumbbell version",
+  bodyweight: "a bodyweight or band version",
+};
+
+/**
+ * A program day converted for a hotel gym. Lifts with a mapped substitute take it;
+ * other Voltra lifts become the plain movement, done on whatever the hotel has. No
+ * loads: different equipment, so the first set finds the weight.
+ */
+export function travelRows(
+  day: ProgramDay,
+  library: Map<string, LibEntry>,
+  travel: Record<string, Partial<Record<HotelGym, string>>>,
+  gym: HotelGym = DEFAULT_HOTEL
+): Row[] {
+  const ids = day.blocks.flatMap((b) => (b.superset?.length ? b.superset : b.exercise ? [b.exercise] : []));
+  const rows = programRows(day.blocks, library);
+  return rows.map((r, i) => {
+    const id = ids.find((x) => (library.get(x)?.name ?? x) === r.name) ?? ids[i];
+    const sub = id ? travel[id]?.[gym] : undefined;
+    const voltra = /voltra/i.test(`${r.name} ${library.get(id ?? "")?.station ?? ""}`);
+    if (!sub && !voltra) return { ...r, load_lb: undefined };
+    const name = sub
+      ? sub.replace(/\s*-\s*PREFERRED.*$/i, "").replace(/^./, (c) => c.toUpperCase())
+      : r.name.replace(/^Voltra\s+/i, "");
+    return {
+      ...r,
+      name,
+      station: "Hotel gym",
+      load_lb: undefined,
+      note: [sub ? `in place of ${r.name}` : `use ${HOTEL_HINT[gym]}`, r.note].filter(Boolean).join(" · "),
+    };
+  });
+}
+
+/**
+ * A program day in the brief's own shape, with every variant built by rule, so
+ * Today, Hevy and Beyond+ handle it unchanged. Used for the short days, and for any
+ * day the coach didn't write out:
+ *   As planned  the program as written
+ *   Beast mode  +1 set on the anchors, everything kept, plus a short day's opener
+ *   Quick       the first block, 3 sets
+ *   Traveling   converted for a hotel gym (program/travel.yaml)
+ */
+export function programBrief(
+  day: ProgramDay,
+  library: Map<string, LibEntry>,
+  date: string,
+  extra: { program?: Program | null; travel?: Record<string, Partial<Record<HotelGym, string>>>; gym?: HotelGym } = {}
+): BriefData {
   const duration = day.minutes ? `${day.minutes[0]}-${day.minutes[1]} min` : "";
+  const routine = programDayTitle(day);
+  const finisherDay = extra.program?.days.find((d) => d.type === "short" && d.id !== day.id && d.blocks.length);
+  const beastRows = [
+    ...programRows(day.blocks, library, { anchorExtraSets: 1 }),
+    ...(day.type === "real" && finisherDay
+      ? programRows(finisherDay.blocks.slice(0, 1), library).map((r) => ({
+          ...r,
+          superset: r.superset ? "Z" : null,
+          note: [`finisher from Day ${finisherDay.id}`, r.note].filter(Boolean).join(" · "),
+        }))
+      : []),
+  ];
+  const quickRows = programRows(day.blocks.slice(0, 1), library, { sets: 3 });
+  const longer = day.minutes ? `${day.minutes[1]}-${day.minutes[1] + 15} min` : "";
   return {
     date,
     day: day.id,
     day_name: day.name,
     day_type: day.type,
+    source: "program",
     headline: "Straight from the program: the coach's adjustments for today aren't in it.",
     variants: {
       full: {
         label: "As planned",
         meta: "as the program writes it",
         duration,
-        hevy_routine: programDayTitle(day),
+        hevy_routine: routine,
         note: day.note ? { kind: "accent", text: day.note.replace(/\s+/g, " ") } : null,
-        rows: programRows(day, library),
+        rows: programRows(day.blocks, library),
+      },
+      beast: {
+        label: "Beast mode",
+        meta:
+          finisherDay && day.type === "real"
+            ? `+1 set on anchors, Day ${finisherDay.id} opener to finish`
+            : "+1 set on anchors",
+        duration: longer,
+        hevy_routine: routine,
+        note: null,
+        rows: beastRows,
+      },
+      minimum: {
+        label: "Quick",
+        meta: "the first block, 3 sets",
+        duration: "15 min",
+        hevy_routine: routine,
+        note: null,
+        rows: quickRows,
+      },
+      travel: {
+        label: "Traveling",
+        meta: `converted for a hotel gym`,
+        duration,
+        hevy_routine: routine,
+        note: null,
+        rows: travelRows(day, library, extra.travel ?? {}, extra.gym),
       },
     },
   };
 }
 
-/** Every program day, keyed by letter. */
-export function programBriefs(programRaw: string | null, libraryRaw: string | null, date: string) {
+/** The coach's alternate for a day, in the brief's shape, tagged as the coach's. */
+function coachBrief(brief: BriefData, id: string, day: ProgramDay | undefined): BriefData | null {
+  const alt = brief.alternates?.[id];
+  if (!alt || !Object.keys(alt.variants).length) return null;
+  const routine = day ? programDayTitle(day) : `Day ${id}`;
+  const variants = Object.fromEntries(
+    Object.entries(alt.variants).map(([k, v]) => [k, { ...v, hevy_routine: v.hevy_routine ?? routine }])
+  );
+  return {
+    date: brief.date,
+    day: id,
+    day_name: alt.day_name || day?.name || `Day ${id}`,
+    day_type: alt.day_type ?? day?.type ?? "real",
+    source: "coach",
+    ...(alt.headline ? { headline: alt.headline } : {}),
+    variants,
+  };
+}
+
+/**
+ * Every program day as a full set of variants: the coach's alternate when the brief
+ * wrote one (the full days), otherwise built by rule from the program.
+ */
+export function programBriefs(
+  programRaw: string | null,
+  libraryRaw: string | null,
+  date: string,
+  { brief = null, travelRaw = null }: { brief?: BriefData | null; travelRaw?: string | null } = {}
+) {
   const program = parseProgram(programRaw);
   const library = libraryEntries(libraryRaw);
+  const travel = parseTravel(travelRaw);
   const out: Record<string, BriefData> = {};
-  for (const day of program?.days ?? []) out[day.id] = programBrief(day, library, date);
+  for (const day of program?.days ?? []) {
+    out[day.id] = (brief && coachBrief(brief, day.id, day)) ?? programBrief(day, library, date, { program, travel });
+  }
   return out;
 }

@@ -83,6 +83,25 @@ sends him to a different day.
 Use the exact routine title as it appears in Hevy. `scripts/sync_program_to_hevy.py`
 writes them as `Day A — Push`, `Day F — Prehab + Core + Conditioning (short)`, etc.
 
+## `alternates`: the other full days
+
+Optional. The coach's version of every **full** program day other than today's
+`day`, so he can pick a different day and still get coached variants:
+
+```json
+"alternates": {
+  "B": { "day_name": "Pull", "day_type": "real", "headline": "…",
+         "variants": { "full": {…}, "beast": {…}, "minimum": {…}, "travel": {…} } }
+}
+```
+
+Same variant shape and rules as today's (real loads, injury cards, tolerance ratings,
+real weights). `hevy_routine` defaults to that day's routine. Short days aren't
+written: the app builds them, and any missing day, by rule from the program (As
+planned; Beast mode +1 set on anchors and a short day's opener; Quick = the first
+block, 3 sets; Traveling converted with `program/travel.yaml`). A bad alternate is
+dropped on its own and never sinks today's brief.
+
 ## Variant rules
 
 - **full** — the session as programmed. Always present.

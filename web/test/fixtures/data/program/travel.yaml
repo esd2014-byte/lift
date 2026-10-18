@@ -1,0 +1,7 @@
+# SYNTHETIC. Same shapes as program/travel.yaml in the data repo.
+substitution_map:
+  db_bench:
+    machines_cardio: chest press machine
+    full_gym: "barbell bench press - PREFERRED, see note"
+  cable_pulldown:
+    machines_cardio: lat pulldown machine

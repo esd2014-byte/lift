@@ -1349,3 +1349,11 @@ button.question[aria-pressed="true"] {
 button.question[aria-pressed="true"]::before {
   color: var(--accent-ink);
 }
+
+/* The coach's note on a row ("MAG neutral bar only", "in place of ..."). */
+.exnote {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--ink-2);
+}

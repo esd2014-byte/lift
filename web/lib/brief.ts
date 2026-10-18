@@ -100,6 +100,7 @@ export async function loadDay(): Promise<DayState> {
       "logs/injuries.json",
       "logs/day-notes.json",
       "athlete/profile.yaml",
+      "program/travel.yaml",
       ...GUESS_PATHS,
     ],
     ["logs/photos"]
@@ -125,11 +126,15 @@ export async function loadDay(): Promise<DayState> {
   // Voltra rows without a load get a calibration guess from lift history.
   const guesses = guessInputs(files);
   const briefData = checked?.brief ? fillLoads(checked.brief, guesses) : null;
+  // Every program day as a full set of variants: the coach's for the full days he
+  // wrote out, rule-built for the rest. Rule-built days get loads from history.
   const programDays = Object.fromEntries(
-    Object.entries(programBriefs(programRaw, files["library/exercises.yaml"] ?? null, today)).map(([id, b]) => [
-      id,
-      fillLoads(b, guesses, { anyRow: true }),
-    ])
+    Object.entries(
+      programBriefs(programRaw, files["library/exercises.yaml"] ?? null, today, {
+        brief: briefData,
+        travelRaw: files["program/travel.yaml"] ?? null,
+      })
+    ).map(([id, b]) => [id, fillLoads(b, guesses, { anyRow: b.source === "program" })])
   );
   if (checked?.problems.length) console.warn(`brief ${briefDate}: ${checked.problems.join("; ")}`);
 
