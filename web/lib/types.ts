@@ -30,6 +30,14 @@ export type Variant = {
   rows: Row[];
 };
 
+/** The coach's version of another full program day, for when he picks it instead. */
+export type Alternate = {
+  day_name: string;
+  day_type?: "real" | "short";
+  headline?: string;
+  variants: Record<string, Variant>;
+};
+
 export type BriefData = {
   date: string;
   generated_at?: string;
@@ -40,6 +48,10 @@ export type BriefData = {
   voltra_mounts?: string[];
   injury_flag?: string | null;
   variants: Record<string, Variant>;
+  /** Day letter -> the coach's variants for that day, when he picks it over today's. */
+  alternates?: Record<string, Alternate>;
+  /** Set by the app: who wrote this day's variants. */
+  source?: "coach" | "program";
 };
 
 export const VARIANT_ORDER = ["full", "beast", "minimum", "travel"] as const;

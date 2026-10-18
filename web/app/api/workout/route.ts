@@ -14,7 +14,7 @@ import { VARIANT_ORDER, type BriefData } from "@/lib/types";
 import { checkBrief } from "@/lib/briefCheck";
 import { withGuessedLoads } from "@/lib/loadGuess";
 import { upsertJsonDay } from "@/lib/dailyLog";
-import { libraryEntries, parseProgram, programBrief } from "@/lib/programDay";
+import { programBriefs } from "@/lib/programDay";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -58,15 +58,20 @@ async function handlePOST(req: NextRequest) {
       let brief: BriefData | null;
       let dayNames: Record<string, string>;
       if (body.day) {
-        // Off-plan: a program day the athlete picked over the coach's.
-        const [programRaw, libraryRaw] = await Promise.all([
+        // A program day other than the coach's pick: the coach's own version of it
+        // when today's brief wrote one, otherwise built by rule from the program.
+        const date = /^\d{4}-\d{2}-\d{2}$/.test(body.briefDate ?? "") ? body.briefDate! : today;
+        const [programRaw, libraryRaw, travelRaw, briefRaw] = await Promise.all([
           readFile("program/current.yaml"),
           readFile("library/exercises.yaml"),
+          readFile("program/travel.yaml"),
+          readFile(`logs/briefs/${date}.json`),
         ]);
-        const pday = parseProgram(programRaw)?.days.find((d) => d.id === body.day);
-        if (!pday) return NextResponse.json({ error: `no Day ${body.day} in the program` }, { status: 404 });
-        if (variant !== "full") return NextResponse.json({ error: "a program day has no variants" }, { status: 400 });
-        brief = await withGuessedLoads(programBrief(pday, libraryEntries(libraryRaw), today), { anyRow: true });
+        const checked = briefRaw ? checkBrief(JSON.parse(briefRaw)).brief : null;
+        const plan = programBriefs(programRaw, libraryRaw, today, { brief: checked, travelRaw })[body.day];
+        if (!plan) return NextResponse.json({ error: `no Day ${body.day} in the program` }, { status: 404 });
+        if (!plan.variants[variant]) return NextResponse.json({ error: "variant not in that day" }, { status: 400 });
+        brief = await withGuessedLoads({ ...plan, date: today }, { anyRow: plan.source === "program" });
         dayNames = parseDayNames(programRaw);
       } else {
         const date = /^\d{4}-\d{2}-\d{2}$/.test(body.briefDate ?? "") ? body.briefDate! : today;

@@ -73,6 +73,8 @@ export default function Today({
   );
   const data: BriefData = (pickedDay && programDays[pickedDay]) || brief;
   const offPlan = data !== brief;
+  // A day the coach wrote out (the full days) vs one built by rule from the program.
+  const ruleBuilt = offPlan && data.source === "program";
   const keys = ORDER.filter((k) => data.variants?.[k]);
   const otherDays = Object.keys(programDays).filter((id) => id !== brief.day);
   /** The brief variant that already trains a program day, e.g. Beast mode promoting to Day A. */
@@ -148,7 +150,8 @@ export default function Today({
       const json = await post({
         action: "start",
         variant: active,
-        ...(offPlan ? { day: pickedDay } : { briefDate: brief.date }),
+        briefDate: brief.date,
+        ...(offPlan ? { day: pickedDay } : {}),
       });
       setStartedAt(json.entry.started_at);
       setPushes({ hevy: json.hevy, voltra: json.voltra });
@@ -252,7 +255,13 @@ export default function Today({
 
       <div className="card">
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-          {offPlan ? <span className="pill due">Your pick</span> : <span className="pill ok">Coach&apos;s pick</span>}
+          {!offPlan ? (
+            <span className="pill ok">Coach&apos;s pick</span>
+          ) : ruleBuilt ? (
+            <span className="pill due">Your pick · from the program</span>
+          ) : (
+            <span className="pill accent">Your pick · coach&apos;s version</span>
+          )}
           {data.day_type === "short" && <span className="pill accent">Short day</span>}
           {stale && !offPlan && <span className="pill due">{weekday(data.date)}&apos;s plan</span>}
         </div>
@@ -262,7 +271,7 @@ export default function Today({
           {!restOpen && v?.duration && <> · {v.duration}</>}
         </p>
         {offPlan ? (
-          <p className="sub">{v?.meta}</p>
+          <p className="sub">{active === "full" && data.headline && !ruleBuilt ? data.headline : v?.meta}</p>
         ) : stale ? (
           <p className="sub">
             Today&apos;s brief isn&apos;t written yet, so this is {weekday(data.date)}&apos;s plan. Still a good
@@ -283,8 +292,8 @@ export default function Today({
             <span className="change">Change</span>
           </summary>
           <p className="hint" style={{ marginTop: 9 }}>
-            The coach&apos;s pick accounts for your injuries, history and ratings. Any other day comes straight from the
-            program.
+            The coach&apos;s pick accounts for your injuries, history and ratings. Full days the coach wrote out come in
+            the coach&apos;s own version; the rest are built from the program.
           </p>
           <div className="variants" style={{ marginTop: 9 }}>
             <button className="variant" data-v="coach" aria-pressed={!offPlan} onClick={() => pickDay(null)}>
@@ -300,7 +309,8 @@ export default function Today({
                   </span>
                   <span className="vmeta">
                     {d.day_type === "short" ? "short" : "full"}
-                    {d.variants.full.duration && <> · {d.variants.full.duration}</>}
+                    {d.variants.full?.duration && <> · {d.variants.full.duration}</>}
+                    {d.source === "coach" ? " · coach's" : " · from the program"}
                   </span>
                 </button>
               );
@@ -478,10 +488,10 @@ export default function Today({
           )}
 
           {/* ---- the session ---- */}
-          {offPlan && (
+          {ruleBuilt && (
             <div className="callout warn" style={{ marginTop: 14 }}>
-              <b>Off-plan: Day {pickedDay} as the program writes it.</b> The coach&apos;s adjustments for today
-              aren&apos;t in it: no injury swaps, no extra RPE caps, no swaps for lifts you dislike.
+              <b>Day {pickedDay}, built from the program.</b> The coach didn&apos;t write this day out, so its
+              adjustments aren&apos;t in it: no injury swaps, no extra RPE caps, no swaps for lifts you dislike.
               {activeInjuries.length > 0 && <> Go by feel around: {activeInjuries.join("; ")}.</>} Tomorrow&apos;s brief
               sees what you picked.
             </div>
@@ -494,8 +504,8 @@ export default function Today({
           {calibrating > 0 && (
             <div className="callout warn" style={{ marginTop: 10 }}>
               <b>Calibration day for {calibrating === 1 ? "one lift" : `${calibrating} lifts`}.</b>{" "}
-              {offPlan ? "The program has no weights" : "The brief didn't set them"}, so Lift guessed from your history.
-              Each is marked below: treat set 1 as a feeler, adjust, and log what you finish on.
+              {ruleBuilt ? "The program has no weights" : "The brief didn't set them"}, so Lift guessed from your
+              history. Each is marked below: treat set 1 as a feeler, adjust, and log what you finish on.
             </div>
           )}
           {/* One card row per exercise: at 360px a four-column table squeezed the names
@@ -629,6 +639,7 @@ function ExRow({ r }: { r: Row }) {
           </>
         )}
       </p>
+      {r.note && <p className="exnote">{r.note}</p>}
       {r.calibration && (
         <div className="calib">
           {r.load_lb} lb is a starting guess ({r.calibration.basis}). After set 1, go up 5–10 lb if it felt easier than

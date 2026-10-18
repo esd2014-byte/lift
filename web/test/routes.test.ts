@@ -227,7 +227,9 @@ test("workout: an off-plan program day starts from the program, and the log says
   assert.equal(chosen.day, "Day B — Pull");
   assert.equal(chosen.off_plan, true);
   assert.equal((await call(workout, { action: "start", variant: "full", day: "Q" })).status, 404);
-  assert.equal((await call(workout, { action: "start", variant: "beast", day: "B" })).status, 400);
+  // A rule-built day has every variant.
+  await call(workout, { action: "end" });
+  assert.equal((await call(workout, { action: "start", variant: "travel", day: "C" })).status, 200);
 });
 
 test("workout: bad requests are refused", async () => {
@@ -276,7 +278,8 @@ test("page data: today's brief, with Voltra loads guessed as calibration", async
 
 test("page data: every program day, with loads from history", async () => {
   const day = await loadDay();
-  assert.deepEqual(Object.keys(day.programDays), ["A", "B"]);
+  assert.deepEqual(Object.keys(day.programDays), ["A", "B", "C"]);
+  assert.equal(day.programDays.B.source, "program", "no alternate in the brief: built by rule");
   const pull = day.programDays.B.variants.full;
   assert.equal(pull.hevy_routine, "Day B — Pull");
   assert.deepEqual(
@@ -295,8 +298,52 @@ test("page data: every program day, with loads from history", async () => {
   assert.equal(pull.rows[0].calibration?.source, "history");
   // Dead Bug: no history, bodyweight - no invented number.
   assert.equal(pull.rows[2].load_lb, undefined);
+  // Rule-built variants: Beast adds a set to anchors and the short day's opener; Quick
+  // is the first block; Traveling swaps to the hotel gym with no loads.
+  const push = day.programDays.A.variants;
+  assert.deepEqual(Object.keys(push), ["full", "beast", "minimum", "travel"]);
+  assert.equal(push.beast.rows[0].reps, "5 × 6-10");
+  assert.match(push.beast.rows.at(-1)!.note ?? "", /finisher from Day C/);
+  assert.deepEqual(
+    push.minimum.rows.map((r) => [r.name, r.reps]),
+    [["DB Bench Press", "3 × 6-10"]]
+  );
+  assert.equal(push.travel.rows[0].name, "Chest press machine");
+  assert.equal(push.travel.rows[0].load_lb, undefined);
+  assert.equal(push.travel.rows[1].name, "Cable Single-Arm Press", "no sub and not a Voltra lift: kept");
+  assert.equal(day.programDays.C.variants.beast.rows.length, 1, "a short day has no finisher of its own");
   assert.equal(day.program?.meta.block, "reintroduction");
   assert.equal(day.goals?.primary?.statement, "Add a little muscle and stay lean.");
+});
+
+test("page data: the coach's alternate for a full day wins over the rule-built one", async () => {
+  const brief = JSON.parse(file(`logs/briefs/${today}.json`));
+  brief.alternates = {
+    B: {
+      day_name: "Pull",
+      day_type: "real",
+      headline: "Pull, written by the coach",
+      variants: {
+        full: { label: "", meta: "", duration: "45 min", rows: [{ name: "DB Row", reps: "4 × 8-12", load_lb: 55 }] },
+        beast: { label: "", meta: "", duration: "60 min", rows: [{ name: "DB Row", reps: "5 × 8-12", load_lb: 55 }] },
+      },
+    },
+    Q: { day_name: "Junk", variants: {} },
+  };
+  writeFileSync(join(dir, `logs/briefs/${today}.json`), JSON.stringify(brief));
+  const day = await loadDay();
+  const b = day.programDays.B;
+  assert.equal(b.source, "coach");
+  assert.equal(b.headline, "Pull, written by the coach");
+  assert.deepEqual(Object.keys(b.variants), ["full", "beast"]);
+  assert.equal(b.variants.beast.hevy_routine, "Day B — Pull");
+  assert.equal(b.variants.full.rows[0].load_lb, 55, "the coach's load stands");
+  assert.equal(day.programDays.C.source, "program");
+
+  const r = await call(workout, { action: "start", variant: "beast", day: "B", briefDate: today });
+  assert.equal(r.status, 200);
+  assert.equal(JSON.parse(file("logs/workouts.json"))[0].day, "Day B — Pull");
+  assert.equal((await call(workout, { action: "start", variant: "travel", day: "B" })).status, 400);
 });
 
 test("page data: bodyweight, measurements and history come through", async () => {
