@@ -188,6 +188,27 @@ writeFileSync(
   ) + "\n"
 );
 
+// A work trip in progress: today through four days out, a hotel with dumbbells.
+const tripDays = ["A", "B", "C", "A", "B"];
+writeFileSync(
+  join(out, "logs/trips.json"),
+  JSON.stringify(
+    [
+      {
+        id: `${daysAgo(0)}-1`,
+        from: daysAgo(0),
+        to: daysAgo(-4),
+        place: "Denver",
+        gym: { type: "db_only", db_max_lb: 50, kettlebells: false },
+        days: tripDays.map((day, i) => ({ date: daysAgo(-i), day: i === 2 ? "rest" : day })),
+        created_at: `${daysAgo(1)}T20:00:00.000Z`,
+      },
+    ],
+    null,
+    2
+  ) + "\n"
+);
+
 // Today's brief, from the template.
 for (const ext of ["json", "md"]) {
   const text = readFileSync(join(fixtures, `brief-template.${ext}`), "utf8").replaceAll("{{DATE}}", today);

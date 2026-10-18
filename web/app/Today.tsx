@@ -39,6 +39,7 @@ export default function Today({
   data: brief,
   programDays,
   activeInjuries,
+  trip,
   dayNames,
   today,
   stale,
@@ -51,6 +52,8 @@ export default function Today({
   programDays: Record<string, BriefData>;
   /** Titles of injuries still active, named when the coach's adjustments are skipped. */
   activeInjuries: string[];
+  /** The trip today falls in: Traveling is the default, converted for its hotel gym. */
+  trip?: { to: string; place?: string; gymName: string; planned: string | null } | null;
   dayNames: Record<string, string>;
   today: string;
   stale: boolean;
@@ -90,7 +93,10 @@ export default function Today({
 
   // Tapping a variant PREVIEWS it. Nothing is recorded until Start: a tap is
   // browsing, and the coach used to read every tap as a decision.
-  const [active, setActive] = useState<string>(runningToday?.variant ?? keys[0] ?? "full");
+  // Away from home, the session to show first is the one converted for the hotel.
+  const [active, setActive] = useState<string>(
+    runningToday?.variant ?? (trip && keys.includes("travel") ? "travel" : keys[0]) ?? "full"
+  );
   const [restOpen, setRestOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [rest, setRest] = useState<"idle" | "saving" | "done" | "error">("idle");
@@ -240,6 +246,19 @@ export default function Today({
         <h2>Today&apos;s pumps</h2>
         <span className="meta">{v?.duration ?? ""}</span>
       </div>
+
+      {trip && (
+        <div className="callout info" style={{ marginBottom: 12 }}>
+          <b>
+            Away{trip.place ? ` in ${trip.place}` : ""} until {weekday(trip.to)}
+          </b>{" "}
+          · {trip.gymName}.{" "}
+          {trip.planned === "rest" ? "Today is a planned rest day." : trip.planned ? `Planned: ${trip.planned}.` : ""}{" "}
+          <a className="tap" href="#gym">
+            Trip plan
+          </a>
+        </div>
+      )}
 
       {unfinished && (
         <div className="callout warn" style={{ marginBottom: 12 }}>

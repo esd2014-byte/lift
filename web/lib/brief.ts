@@ -12,6 +12,7 @@ import { parseInjuries, type Injury } from "./injuries";
 import { parseDayNotes, type DayNote } from "./dayNotes";
 import { parseGoals, type Goals } from "./goals";
 import { exerciseCards, missingStations, readEquipment, type Equipment, type ExerciseCard } from "./gym";
+import { activeTrip, parseTrips, tripRestDays, type Trip } from "./trips";
 
 /**
  * Everything the home page needs, read from the repo.
@@ -57,6 +58,7 @@ export type DayState = {
   injuries: Injury[];
   dayNotes: DayNote[];
   gym: { equipment: Equipment | null; exercises: ExerciseCard[] };
+  trips: Trip[];
 };
 
 function daysBetween(a: string, b: string) {
@@ -103,6 +105,7 @@ export async function loadDay(): Promise<DayState> {
       "logs/day-notes.json",
       "athlete/profile.yaml",
       "program/travel.yaml",
+      "logs/trips.json",
       ...GUESS_PATHS,
     ],
     ["logs/photos"]
@@ -128,6 +131,9 @@ export async function loadDay(): Promise<DayState> {
   // Voltra rows without a load get a calibration guess from lift history.
   const guesses = guessInputs(files);
   const equipment = readEquipment(files["gym/equipment.yaml"] ?? null);
+  const trips = parseTrips(files["logs/trips.json"] ?? null);
+  // On a trip, Traveling sessions are converted for that hotel's gym.
+  const trip = activeTrip(trips, today);
   const briefData = checked?.brief ? fillLoads(checked.brief, guesses) : null;
   // Every program day as a full set of variants: the coach's for the full days he
   // wrote out, rule-built for the rest. Rule-built days get loads from history.
@@ -137,6 +143,7 @@ export async function loadDay(): Promise<DayState> {
         brief: briefData,
         travelRaw: files["program/travel.yaml"] ?? null,
         unavailable: missingStations(equipment),
+        ...(trip ? { hotel: trip.gym } : {}),
       })
     ).map(([id, b]) => [id, fillLoads(b, guesses, { anyRow: b.source === "program" })])
   );
@@ -207,7 +214,8 @@ export async function loadDay(): Promise<DayState> {
     bodyweight: { logged, skipped, rolling7, days, last, atStart },
     measurements: { lastDate: lastMeas, daysSince: lastMeas ? daysBetween(lastMeas, today) : null },
     photos: { lastDate: lastPhoto, daysSince: lastPhoto ? daysBetween(lastPhoto, today) : null },
-    restDays: (restLog ?? []).map((r) => r.date),
+    // A planned rest day on a trip is rest too, not a miss.
+    restDays: [...(restLog ?? []).map((r) => r.date), ...tripRestDays(trips, today)],
     dayNames,
     workouts: parseLog(workoutsRaw),
     programDays,
@@ -216,5 +224,6 @@ export async function loadDay(): Promise<DayState> {
     injuries: parseInjuries(files["logs/injuries.json"] ?? null),
     dayNotes: parseDayNotes(files["logs/day-notes.json"] ?? null),
     gym: { equipment, exercises: exerciseCards(files) },
+    trips,
   };
 }

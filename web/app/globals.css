@@ -1451,3 +1451,45 @@ details.gymsec {
   color: var(--ink-2);
   border-bottom: 1px solid var(--border);
 }
+
+/* ---- trips ------------------------------------------------------------- */
+.card.trip {
+  margin-top: 8px;
+}
+.tripdays {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.tripdays li {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+}
+.tripdays li.now span {
+  color: var(--accent);
+  font-weight: 700;
+}
+.tripdays li.past {
+  opacity: 0.6;
+}
+.tripdays select,
+input.wideinput,
+.gymfields input[type="date"] {
+  width: 100%;
+  min-height: 44px;
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+.gymfields.two {
+  grid-template-columns: 1fr 1fr;
+}

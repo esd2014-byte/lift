@@ -44,7 +44,7 @@ export type Program = {
   nextTest: string | null;
 };
 
-type LibEntry = { name: string; station?: string; tolerance?: string; status?: string };
+type LibEntry = { name: string; station?: string; tolerance?: string; status?: string; location?: string };
 
 /** Program days in rotation order, plus the block and testing context around them. */
 export function parseProgram(raw: string | null): Program | null {
@@ -96,6 +96,7 @@ export function libraryEntries(raw: string | null): Map<string, LibEntry> {
         station: ex.station ? String(ex.station) : undefined,
         tolerance: ex.tolerance ? String(ex.tolerance) : undefined,
         status: ex.status ? String(ex.status) : undefined,
+        location: ex.location ? String(ex.location) : undefined,
       });
     }
   }
@@ -124,11 +125,22 @@ function repsText(b: ProgramBlock): string {
   return `${sets} sets`;
 }
 
-type RowOpts = { anchorExtraSets?: number; sets?: number; unavailable?: Set<string> };
+type RowOpts = {
+  anchorExtraSets?: number;
+  sets?: number;
+  unavailable?: Set<string>;
+  /** Away from home: `location: travel_only` lifts are allowed. */
+  away?: boolean;
+};
 
 /** One row per exercise, supersets lettered A, B, C in program order. */
 export function programRows(blocks: ProgramBlock[], library: Map<string, LibEntry>, opts: RowOpts = {}): Row[] {
-  const rows: Row[] = [];
+  return programItems(blocks, library, opts).map((x) => x.row);
+}
+
+/** The same rows, each with the library id it came from. */
+function programItems(blocks: ProgramBlock[], library: Map<string, LibEntry>, opts: RowOpts = {}) {
+  const rows: Array<{ id: string; row: Row }> = [];
   let letter = 0;
   for (const b0 of blocks) {
     const sets = opts.sets ?? (b0.sets ?? 3) + (b0.anchor ? (opts.anchorExtraSets ?? 0) : 0);
@@ -141,6 +153,8 @@ export function programRows(blocks: ProgramBlock[], library: Map<string, LibEntr
       // Never program what the athlete has taken out of rotation, or what the gym can't do.
       if (lib?.tolerance === "forbidden" || lib?.status === "inactive" || lib?.status === "retired") continue;
       if (lib?.station && opts.unavailable?.has(lib.station)) continue;
+      // The basement can't take an overhead lockout (84 in ceiling).
+      if (lib?.location === "travel_only" && !opts.away) continue;
       const notes = [
         b.anchor ? "anchor" : "",
         b.droppable ? "drop it if short on time" : "",
@@ -148,21 +162,34 @@ export function programRows(blocks: ProgramBlock[], library: Map<string, LibEntr
         b.note ?? "",
       ].filter(Boolean);
       rows.push({
-        superset: ss,
-        name: lib?.name ?? id,
-        station: stationLabel(lib?.station),
-        reps: repsText(b),
-        rpe: b.rpe ?? null,
-        ...(notes.length ? { note: notes.join(" · ") } : {}),
+        id,
+        row: {
+          superset: ss,
+          name: lib?.name ?? id,
+          station: stationLabel(lib?.station),
+          reps: repsText(b),
+          rpe: b.rpe ?? null,
+          ...(notes.length ? { note: notes.join(" · ") } : {}),
+        },
       });
     }
   }
   return rows;
 }
 
-/** The hotel gym a Traveling session is converted for, until a trip says otherwise. */
+/** The kind of hotel gym a Traveling session is converted for. */
 export type HotelGym = "machines_cardio" | "full_gym" | "db_only" | "bodyweight";
-export const DEFAULT_HOTEL: HotelGym = "machines_cardio";
+export const HOTEL_GYMS: Record<HotelGym, string> = {
+  machines_cardio: "Machines + cardio",
+  full_gym: "Full gym",
+  db_only: "Dumbbells only",
+  bodyweight: "Bodyweight only",
+};
+
+/** What a hotel gym has: its kind, its heaviest dumbbell, and whether it has kettlebells. */
+export type Hotel = { type: HotelGym; db_max_lb: number | null; kettlebells: boolean };
+/** Until a trip says otherwise: the most common hotel gym. */
+export const DEFAULT_HOTEL: Hotel = { type: "machines_cardio", db_max_lb: null, kettlebells: false };
 
 /** program/travel.yaml: library id -> { hotel gym type -> substitute }. */
 export function parseTravel(raw: string | null): Record<string, Partial<Record<HotelGym, string>>> {
@@ -183,22 +210,33 @@ const HOTEL_HINT: Record<HotelGym, string> = {
 
 /**
  * A program day converted for a hotel gym. Lifts with a mapped substitute take it;
- * other Voltra lifts become the plain movement, done on whatever the hotel has. No
+ * other Voltra lifts become the plain movement, done on whatever the hotel has;
+ * dumbbell and kettlebell lifts say what to do when the hotel can't match them. No
  * loads: different equipment, so the first set finds the weight.
  */
 export function travelRows(
   day: ProgramDay,
   library: Map<string, LibEntry>,
   travel: Record<string, Partial<Record<HotelGym, string>>>,
-  gym: HotelGym = DEFAULT_HOTEL
+  hotel: Hotel = DEFAULT_HOTEL
 ): Row[] {
-  const ids = day.blocks.flatMap((b) => (b.superset?.length ? b.superset : b.exercise ? [b.exercise] : []));
-  const rows = programRows(day.blocks, library);
-  return rows.map((r, i) => {
-    const id = ids.find((x) => (library.get(x)?.name ?? x) === r.name) ?? ids[i];
-    const sub = id ? travel[id]?.[gym] : undefined;
-    const voltra = /voltra/i.test(`${r.name} ${library.get(id ?? "")?.station ?? ""}`);
-    if (!sub && !voltra) return { ...r, load_lb: undefined };
+  return programItems(day.blocks, library, { away: true }).map(({ id, row: r }) => {
+    const station = library.get(id)?.station ?? "";
+    const sub = travel[id]?.[hotel.type];
+    const voltra = /voltra/i.test(`${r.name} ${station}`);
+    const dumbbell = station === "nuobell" || station === "small_db";
+    const hints = [
+      dumbbell && hotel.type === "bodyweight" ? `no dumbbells: use ${HOTEL_HINT.bodyweight}` : "",
+      dumbbell && hotel.db_max_lb && hotel.type !== "bodyweight" ? `hotel dumbbells go to ${hotel.db_max_lb} lb` : "",
+      station === "kettlebell" && !hotel.kettlebells ? "no kettlebells: use a dumbbell" : "",
+    ].filter(Boolean);
+    if (!sub && !voltra) {
+      return {
+        ...r,
+        load_lb: undefined,
+        ...(hints.length ? { note: [...hints, r.note].filter(Boolean).join(" · ") } : {}),
+      };
+    }
     const name = sub
       ? sub.replace(/\s*-\s*PREFERRED.*$/i, "").replace(/^./, (c) => c.toUpperCase())
       : r.name.replace(/^Voltra\s+/i, "");
@@ -207,7 +245,7 @@ export function travelRows(
       name,
       station: "Hotel gym",
       load_lb: undefined,
-      note: [sub ? `in place of ${r.name}` : `use ${HOTEL_HINT[gym]}`, r.note].filter(Boolean).join(" · "),
+      note: [sub ? `in place of ${r.name}` : `use ${HOTEL_HINT[hotel.type]}`, r.note].filter(Boolean).join(" · "),
     };
   });
 }
@@ -228,7 +266,7 @@ export function programBrief(
   extra: {
     program?: Program | null;
     travel?: Record<string, Partial<Record<HotelGym, string>>>;
-    gym?: HotelGym;
+    hotel?: Hotel;
     /** Home stations the gym can't serve right now (lib/gym.ts missingStations). */
     unavailable?: Set<string>;
   } = {}
@@ -285,11 +323,11 @@ export function programBrief(
       },
       travel: {
         label: "Traveling",
-        meta: `converted for a hotel gym`,
+        meta: `converted for ${extra.hotel ? HOTEL_GYMS[extra.hotel.type].toLowerCase() : "a hotel gym"}`,
         duration,
         hevy_routine: routine,
         note: null,
-        rows: travelRows(day, library, extra.travel ?? {}, extra.gym),
+        rows: travelRows(day, library, extra.travel ?? {}, extra.hotel),
       },
     },
   };
@@ -326,7 +364,8 @@ export function programBriefs(
     brief = null,
     travelRaw = null,
     unavailable,
-  }: { brief?: BriefData | null; travelRaw?: string | null; unavailable?: Set<string> } = {}
+    hotel,
+  }: { brief?: BriefData | null; travelRaw?: string | null; unavailable?: Set<string>; hotel?: Hotel } = {}
 ) {
   const program = parseProgram(programRaw);
   const library = libraryEntries(libraryRaw);
@@ -334,7 +373,8 @@ export function programBriefs(
   const out: Record<string, BriefData> = {};
   for (const day of program?.days ?? []) {
     out[day.id] =
-      (brief && coachBrief(brief, day.id, day)) ?? programBrief(day, library, date, { program, travel, unavailable });
+      (brief && coachBrief(brief, day.id, day)) ??
+      programBrief(day, library, date, { program, travel, unavailable, hotel });
   }
   return out;
 }

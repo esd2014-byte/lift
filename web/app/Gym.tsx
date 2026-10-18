@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { didntSave, postJson } from "@/lib/postJson";
 import { isActive, LISTS, type Equipment, type ExerciseCard, type ListId } from "@/lib/gymShared";
+import type { Trip } from "@/lib/trips";
+import Trips from "./Trips";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const md = (iso: string) => {
@@ -26,7 +28,19 @@ type Save = (body: Record<string, unknown>) => Promise<boolean>;
  * the coach may program. Changes reach the coach's plan from tomorrow's brief, and
  * days the app builds itself right away. History is never touched.
  */
-export default function Gym({ equipment, exercises }: { equipment: Equipment | null; exercises: ExerciseCard[] }) {
+export default function Gym({
+  equipment,
+  exercises,
+  trips,
+  today,
+  dayNames,
+}: {
+  equipment: Equipment | null;
+  exercises: ExerciseCard[];
+  trips: Trip[];
+  today: string;
+  dayNames: Record<string, string>;
+}) {
   const [eq, setEq] = useState(equipment);
   const [cards, setCards] = useState(exercises);
   const [error, setError] = useState<string | null>(null);
@@ -66,12 +80,22 @@ export default function Gym({ equipment, exercises }: { equipment: Equipment | n
         </p>
       )}
 
-      <details className="adjust gymsec" open>
+      {/* With a trip planned, the trip is what you came for: Home starts closed. */}
+      <details className="adjust gymsec" open={!trips.some((t) => t.to >= today)}>
         <summary>
           <span>Home</span>
           <span className="change">Show</span>
         </summary>
         {eq ? <Home eq={eq} setEq={setEq} save={save} /> : <p className="empty">No equipment list in the data repo.</p>}
+      </details>
+
+      <details className="adjust gymsec" open={trips.some((t) => t.to >= today)}>
+        <summary>
+          <span>Hotel</span>
+          <span className="current">{trips.some((t) => t.from <= today && today <= t.to) ? "away now" : ""}</span>
+          <span className="change">Show</span>
+        </summary>
+        <Trips initial={trips} today={today} dayNames={dayNames} />
       </details>
 
       <details className="adjust gymsec">
