@@ -18,6 +18,7 @@ import Body from "./Body";
 import Today from "./Today";
 import Program from "./Program";
 import Goal from "./Goal";
+import Gym from "./Gym";
 import { lastSession, lastTrainedByDay, noteDates, questions } from "@/lib/recent";
 import { workoutDay } from "@/lib/session";
 
@@ -199,6 +200,11 @@ export default async function Page() {
                 </p>
               </>
             ),
+          },
+          {
+            id: "gym",
+            label: "Gym",
+            content: <Gym equipment={state.gym.equipment} exercises={state.gym.exercises} />,
           },
           {
             id: "injury",
