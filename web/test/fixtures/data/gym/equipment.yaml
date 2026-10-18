@@ -1,0 +1,15 @@
+# SYNTHETIC. Same shapes as gym/equipment.yaml in the data repo.
+dumbbells:
+  - model: adjustable
+    min_lb: 5
+    max_lb: 80
+    increment_lb: 5
+  - model: fixed pairs
+    sizes_lb: [3, 5, 10, 15, 20]
+
+kettlebells:
+  fixed_lb: [25, 35]
+  adjustable:
+    range_lb: [26.5, 70.5]
+    increment_lb: 4.4
+    status: owned

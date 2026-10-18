@@ -3,6 +3,8 @@ import { readMany } from "./store";
 import { hevyTitles } from "./hevyRoutine";
 import { libraryIds, lookupId } from "./voltraSession";
 import type { BriefData, Row } from "./types";
+import { floor5, parseWeights, realWeight, type Weights } from "./weights";
+import { libraryEntries } from "./programDay";
 import type { DigestSession, VoltraSession } from "./metrics";
 
 /**
@@ -21,8 +23,8 @@ import type { DigestSession, VoltraSession } from "./metrics";
  *                  scripts/voltra_mapping.yaml `estimate_from`.
  *   3. note      - a number in the coach's note.
  *   4. none      - a deliberately light start.
- * Every estimate rounds DOWN to 5 lb: a calibration set that's too light costs a set;
- * one that's too heavy costs a shoulder.
+ * Every estimate rounds DOWN to a weight that exists for that station (lib/weights.ts):
+ * a calibration set that's too light costs a set; one that's too heavy costs a shoulder.
  */
 
 export type Calibration = {
@@ -49,6 +51,10 @@ export type GuessInputs = {
   sessions: DigestSession[];
   /** Voltra history, any order. */
   voltraSessions: VoltraSession[];
+  /** Library id -> station ("nuobell", "small_db", "voltra_platform"...). */
+  stations: Map<string, string>;
+  /** The loads that exist in the gym; null rounds everything to the Voltra's 5 lb. */
+  weights: Weights | null;
 };
 
 const DEFAULT_RPE = 8;
@@ -63,10 +69,7 @@ export function repRange(reps: string): { lo: number; hi: number } {
   return { lo: n, hi: n };
 }
 
-/** Rounded down to a 5 lb step, within what the Voltra can load (5-230). */
-export function floor5(lb: number) {
-  return Math.max(5, Math.min(230, Math.floor(lb / 5) * 5));
-}
+export { floor5 };
 
 /**
  * The weight for `reps` reps with `rir` reps left in the tank, from a set of
@@ -126,7 +129,11 @@ function rpeOf(row: Row): number {
  * than written by the coach. Those only ever get a number from real history: a light
  * default is right for a cable, wrong for a pair of dumbbells.
  */
-export function guessRow(row: Row, input: GuessInputs, { anyRow = false } = {}): Calibration | null {
+export function guessRow(
+  row: Row,
+  input: GuessInputs,
+  { anyRow = false, nuobellPartner = false } = {}
+): Calibration | null {
   if (typeof row.load_lb === "number" && Number.isFinite(row.load_lb)) return null;
   const id = lookupId(input.libraryIds, row.name);
   const action = id ? input.voltraActions[id] : undefined;
@@ -136,6 +143,7 @@ export function guessRow(row: Row, input: GuessInputs, { anyRow = false } = {}):
   const rir = 10 - rpe;
   const { hi } = repRange(row.reps);
   const base = { reps: row.reps, rpe };
+  const round = (lb: number) => realWeight(lb, input.stations.get(id), input.weights, { nuobellPartner });
 
   const hevy = lastLogged(input.sessions, input.hevyTitles.get(id));
   const voltra = action ? lastOnVoltra(input.voltraSessions, action, row.name) : null;
@@ -143,7 +151,7 @@ export function guessRow(row: Row, input: GuessInputs, { anyRow = false } = {}):
   if (own) {
     return {
       ...base,
-      lb: floor5(carryOver(own.lb, own.reps, hi, rir)),
+      lb: round(carryOver(own.lb, own.reps, hi, rir)),
       source: "history",
       basis: `your last ${own.title}: ${own.lb} lb × ${own.reps} on ${own.date}`,
     };
@@ -155,7 +163,7 @@ export function guessRow(row: Row, input: GuessInputs, { anyRow = false } = {}):
     if (theirs) {
       return {
         ...base,
-        lb: floor5(carryOver(theirs.lb, theirs.reps, hi, rir) * rel.ratio),
+        lb: round(carryOver(theirs.lb, theirs.reps, hi, rir) * rel.ratio),
         source: "related",
         basis: `no history for this one; ${Math.round(rel.ratio * 100)}% of your ${theirs.title}: ${theirs.lb} lb × ${theirs.reps} on ${theirs.date}`,
       };
@@ -167,7 +175,7 @@ export function guessRow(row: Row, input: GuessInputs, { anyRow = false } = {}):
   if (noted) {
     return {
       ...base,
-      lb: floor5(Number(noted[1])),
+      lb: round(Number(noted[1])),
       source: "note",
       basis: "no history; the number in the coach's note",
     };
@@ -182,7 +190,15 @@ export function fillLoads(brief: BriefData, input: GuessInputs, opts: { anyRow?:
     variants[key] = {
       ...v,
       rows: v.rows.map((row) => {
-        const calibration = guessRow(row, input, opts);
+        // A dumbbell lift supersetted with a NUOBELL lift only has the fixed set.
+        const nuobellPartner = v.rows.some(
+          (o) =>
+            o !== row &&
+            row.superset &&
+            o.superset === row.superset &&
+            input.stations.get(lookupId(input.libraryIds, o.name) ?? "") === "nuobell"
+        );
+        const calibration = guessRow(row, input, { ...opts, nuobellPartner });
         return calibration ? { ...row, load_lb: calibration.lb, calibration } : row;
       }),
     };
@@ -194,6 +210,7 @@ export const GUESS_PATHS = [
   "library/exercises.yaml",
   "scripts/voltra_mapping.yaml",
   "scripts/hevy_mapping.yaml",
+  "gym/equipment.yaml",
   "logs/hevy/recent.json",
   "logs/voltra/recent.json",
 ] as const;
@@ -219,6 +236,12 @@ export function guessInputs(files: Record<string, string | null | undefined>): G
     hevyTitles: hevyTitles(files["scripts/hevy_mapping.yaml"] ?? null),
     sessions: history<DigestSession>("logs/hevy/recent.json"),
     voltraSessions: history<VoltraSession>("logs/voltra/recent.json"),
+    stations: new Map(
+      [...libraryEntries(files["library/exercises.yaml"] ?? null)].flatMap(([id, e]) =>
+        e.station ? [[id, e.station] as [string, string]] : []
+      )
+    ),
+    weights: parseWeights(files["gym/equipment.yaml"]),
   };
 }
 

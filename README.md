@@ -40,11 +40,12 @@ flowchart LR
   A -. push today's session .-> V
 ```
 
-1. **06:00.** Vercel Cron pulls recent workouts from Hevy and the Voltra API and
-   commits a compact digest to the data repo.
-2. **07:00.** A scheduled Claude routine reads the program, the exercise library,
-   injury constraints and the digests, and writes the day's brief: which session,
-   why, at what loads. The brief has a prose part and a JSON part that follows
+1. **03:00–04:00.** Vercel Cron pulls recent workouts from Hevy and the Voltra API
+   and commits a compact digest to the data repo.
+2. **05:00.** A scheduled Claude routine reads the program, the exercise library,
+   the equipment, injury constraints and the digests, and writes the day's brief:
+   which session, why, at what loads (only weights the gym actually has). A second
+   run at 06:00 retries only if no valid brief landed. The brief has a prose part and a JSON part that follows
    [a documented schema](docs/brief-schema.md).
 3. **At the gym.** The app shows the coach's pick and lets you swap variants (as
    planned, beast mode, quick, traveling, can't train) or pick any other program day,

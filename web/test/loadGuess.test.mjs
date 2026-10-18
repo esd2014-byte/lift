@@ -20,6 +20,7 @@ for (const f of readdirSync(out).filter((f) => f.endsWith(".js"))) {
 }
 writeFileSync(join(out, "package.json"), '{ "type": "module" }\n');
 const G = await import(`${out}/loadGuess.js`);
+const W = await import(`${out}/weights.js`);
 
 let failed = 0;
 const eq = (label, got, want) => {
@@ -134,6 +135,33 @@ eq(
   ).source,
   "none"
 );
+
+// ---- real weights ----------------------------------------------------------------
+const gym = W.parseWeights(`
+dumbbells:
+  - {min_lb: 5, max_lb: 80, increment_lb: 5}
+  - {sizes_lb: [3, 5, 10, 15, 20]}
+kettlebells:
+  fixed_lb: [25, 35, 35]
+  adjustable: {range_lb: [26.5, 70.5], increment_lb: 4.4, status: owned}
+`);
+eq("NUOBELL steps", [gym.nuobell[0], gym.nuobell.at(-1), gym.nuobell.length], [5, 80, 16]);
+eq("kettlebells", gym.kettlebell, [25, 26.5, 30.9, 35, 35.3, 39.7, 44.1, 48.5, 52.9, 57.3, 61.7, 66.1, 70.5]);
+eq(
+  "rounded down to a real weight",
+  [
+    W.realWeight(37, "nuobell", gym),
+    W.realWeight(3, "nuobell", gym),
+    W.realWeight(12, "small_db", gym, { nuobellPartner: true }),
+    W.realWeight(27, "small_db", gym, { nuobellPartner: true }),
+    W.realWeight(27, "small_db", gym),
+    W.realWeight(40, "kettlebell", gym),
+    W.realWeight(47.9, "voltra_platform", gym),
+    W.realWeight(47.9, "nuobell", null),
+  ],
+  [35, 5, 10, 20, 25, 39.7, 45, 45]
+);
+eq("no equipment file", W.parseWeights("other: 1"), null);
 
 if (failed) {
   console.log(`loadGuess: ${failed} check(s) failed`);

@@ -31,7 +31,7 @@ const VARIANTS = "logs/variants.json";
  *           the coach's pick: that program day is built from the program instead
  *           of the brief, and the log says it was off-plan.
  *   end     records the elapsed time, then pulls Hevy and Voltra so today's work
- *           counts today rather than after tomorrow's 6am sync.
+ *           counts today rather than after tomorrow's early-morning sync.
  *   close   closes a workout that was never ended, without inventing a duration.
  *
  * The pushes and syncs report their own failures; neither can undo a start or end.
