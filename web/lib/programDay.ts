@@ -124,7 +124,7 @@ function repsText(b: ProgramBlock): string {
   return `${sets} sets`;
 }
 
-type RowOpts = { anchorExtraSets?: number; sets?: number };
+type RowOpts = { anchorExtraSets?: number; sets?: number; unavailable?: Set<string> };
 
 /** One row per exercise, supersets lettered A, B, C in program order. */
 export function programRows(blocks: ProgramBlock[], library: Map<string, LibEntry>, opts: RowOpts = {}): Row[] {
@@ -138,7 +138,9 @@ export function programRows(blocks: ProgramBlock[], library: Map<string, LibEntr
     for (const id of ids) {
       const lib = library.get(id);
       // Never program what the athlete has ruled out, even off-plan.
+      // Never program what the athlete has taken out of rotation, or what the gym can't do.
       if (lib?.tolerance === "forbidden" || lib?.status === "inactive" || lib?.status === "retired") continue;
+      if (lib?.station && opts.unavailable?.has(lib.station)) continue;
       const notes = [
         b.anchor ? "anchor" : "",
         b.droppable ? "drop it if short on time" : "",
@@ -223,22 +225,28 @@ export function programBrief(
   day: ProgramDay,
   library: Map<string, LibEntry>,
   date: string,
-  extra: { program?: Program | null; travel?: Record<string, Partial<Record<HotelGym, string>>>; gym?: HotelGym } = {}
+  extra: {
+    program?: Program | null;
+    travel?: Record<string, Partial<Record<HotelGym, string>>>;
+    gym?: HotelGym;
+    /** Home stations the gym can't serve right now (lib/gym.ts missingStations). */
+    unavailable?: Set<string>;
+  } = {}
 ): BriefData {
   const duration = day.minutes ? `${day.minutes[0]}-${day.minutes[1]} min` : "";
   const routine = programDayTitle(day);
   const finisherDay = extra.program?.days.find((d) => d.type === "short" && d.id !== day.id && d.blocks.length);
   const beastRows = [
-    ...programRows(day.blocks, library, { anchorExtraSets: 1 }),
+    ...programRows(day.blocks, library, { anchorExtraSets: 1, unavailable: extra.unavailable }),
     ...(day.type === "real" && finisherDay
-      ? programRows(finisherDay.blocks.slice(0, 1), library).map((r) => ({
+      ? programRows(finisherDay.blocks.slice(0, 1), library, { unavailable: extra.unavailable }).map((r) => ({
           ...r,
           superset: r.superset ? "Z" : null,
           note: [`finisher from Day ${finisherDay.id}`, r.note].filter(Boolean).join(" · "),
         }))
       : []),
   ];
-  const quickRows = programRows(day.blocks.slice(0, 1), library, { sets: 3 });
+  const quickRows = programRows(day.blocks.slice(0, 1), library, { sets: 3, unavailable: extra.unavailable });
   const longer = day.minutes ? `${day.minutes[1]}-${day.minutes[1] + 15} min` : "";
   return {
     date,
@@ -254,7 +262,7 @@ export function programBrief(
         duration,
         hevy_routine: routine,
         note: day.note ? { kind: "accent", text: day.note.replace(/\s+/g, " ") } : null,
-        rows: programRows(day.blocks, library),
+        rows: programRows(day.blocks, library, { unavailable: extra.unavailable }),
       },
       beast: {
         label: "Beast mode",
@@ -314,14 +322,19 @@ export function programBriefs(
   programRaw: string | null,
   libraryRaw: string | null,
   date: string,
-  { brief = null, travelRaw = null }: { brief?: BriefData | null; travelRaw?: string | null } = {}
+  {
+    brief = null,
+    travelRaw = null,
+    unavailable,
+  }: { brief?: BriefData | null; travelRaw?: string | null; unavailable?: Set<string> } = {}
 ) {
   const program = parseProgram(programRaw);
   const library = libraryEntries(libraryRaw);
   const travel = parseTravel(travelRaw);
   const out: Record<string, BriefData> = {};
   for (const day of program?.days ?? []) {
-    out[day.id] = (brief && coachBrief(brief, day.id, day)) ?? programBrief(day, library, date, { program, travel });
+    out[day.id] =
+      (brief && coachBrief(brief, day.id, day)) ?? programBrief(day, library, date, { program, travel, unavailable });
   }
   return out;
 }

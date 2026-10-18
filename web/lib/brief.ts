@@ -11,6 +11,7 @@ import { parseProgram, programBriefs, type Program } from "./programDay";
 import { parseInjuries, type Injury } from "./injuries";
 import { parseDayNotes, type DayNote } from "./dayNotes";
 import { parseGoals, type Goals } from "./goals";
+import { exerciseCards, missingStations, readEquipment, type Equipment, type ExerciseCard } from "./gym";
 
 /**
  * Everything the home page needs, read from the repo.
@@ -55,6 +56,7 @@ export type DayState = {
   goals: Goals | null;
   injuries: Injury[];
   dayNotes: DayNote[];
+  gym: { equipment: Equipment | null; exercises: ExerciseCard[] };
 };
 
 function daysBetween(a: string, b: string) {
@@ -125,6 +127,7 @@ export async function loadDay(): Promise<DayState> {
   const checked = briefDate ? checkBrief(parseJson<unknown>(files[`logs/briefs/${briefDate}.json`])) : null;
   // Voltra rows without a load get a calibration guess from lift history.
   const guesses = guessInputs(files);
+  const equipment = readEquipment(files["gym/equipment.yaml"] ?? null);
   const briefData = checked?.brief ? fillLoads(checked.brief, guesses) : null;
   // Every program day as a full set of variants: the coach's for the full days he
   // wrote out, rule-built for the rest. Rule-built days get loads from history.
@@ -133,6 +136,7 @@ export async function loadDay(): Promise<DayState> {
       programBriefs(programRaw, files["library/exercises.yaml"] ?? null, today, {
         brief: briefData,
         travelRaw: files["program/travel.yaml"] ?? null,
+        unavailable: missingStations(equipment),
       })
     ).map(([id, b]) => [id, fillLoads(b, guesses, { anyRow: b.source === "program" })])
   );
@@ -211,5 +215,6 @@ export async function loadDay(): Promise<DayState> {
     goals: parseGoals(files["athlete/profile.yaml"] ?? null),
     injuries: parseInjuries(files["logs/injuries.json"] ?? null),
     dayNotes: parseDayNotes(files["logs/day-notes.json"] ?? null),
+    gym: { equipment, exercises: exerciseCards(files) },
   };
 }

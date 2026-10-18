@@ -21,6 +21,7 @@ import { POST as measurements } from "@/app/api/measurements/route";
 import { POST as restDay } from "@/app/api/rest-day/route";
 import { POST as injuries } from "@/app/api/injuries/route";
 import { POST as dayNote } from "@/app/api/day-note/route";
+import { POST as gym } from "@/app/api/gym/route";
 import { POST as tolerance } from "@/app/api/tolerance/route";
 import { POST as workout } from "@/app/api/workout/route";
 import { POST as photo } from "@/app/api/photo/route";
@@ -74,7 +75,7 @@ async function call(
 
 // ---- auth: every write route refuses a request without a session --------------------
 test("every write route 404s without a session", async () => {
-  for (const h of [bodyweight, measurements, restDay, injuries, dayNote, tolerance, workout, photo]) {
+  for (const h of [bodyweight, measurements, restDay, injuries, dayNote, gym, tolerance, workout, photo]) {
     const r = await call(h, {}, { authed: false });
     assert.equal(r.status, 404);
   }
@@ -178,6 +179,36 @@ test("day notes: appended; a trained note counts toward the streak", async () =>
   assert.equal((r3.json.note as { question: string }).question, "One workout, or several?");
   const threeBack = new Date(Date.parse(`${today}T12:00:00Z`) - 3 * 86400000).toISOString().slice(0, 10);
   assert.equal((await call(dayNote, { text: "x", date: threeBack })).status, 400);
+});
+
+// ---- gym ---------------------------------------------------------------------------------
+test("gym: deactivating an exercise drops it from app-built days; history untouched", async () => {
+  const hevyBefore = file("logs/hevy/recent.json");
+  assert.equal((await call(gym, { action: "exercise", id: "db_row", status: "inactive" })).status, 200);
+  assert.match(file("library/exercises.yaml"), /id: db_row,[^\n]*\n[^\n]*tolerance: fine, status: inactive\}/);
+  let day = await loadDay();
+  assert.ok(!day.programDays.B.variants.full.rows.some((r) => r.name === "DB Row"));
+  assert.equal(day.gym.exercises.find((c) => c.id === "db_row")!.status, "inactive");
+  assert.equal(file("logs/hevy/recent.json"), hevyBefore, "history is never touched");
+
+  assert.equal((await call(gym, { action: "exercise", id: "db_row", status: "active" })).status, 200);
+  day = await loadDay();
+  assert.ok(day.programDays.B.variants.full.rows.some((r) => r.name === "DB Row"));
+  assert.equal((await call(gym, { action: "exercise", id: "no_such", status: "inactive" })).status, 404);
+  assert.equal((await call(gym, { action: "exercise", id: "db_row", status: "gone" })).status, 400);
+});
+
+test("gym: equipment edits keep the file's comments, and bad ones are refused", async () => {
+  assert.equal((await call(gym, { action: "list_add", list: "accessories", item: "step-up blocks" })).status, 200);
+  assert.equal((await call(gym, { action: "kettlebells", sizes: [25, 35, 53] })).status, 200);
+  const yaml = file("gym/equipment.yaml");
+  assert.ok(yaml.includes("# A comment the editor must keep."));
+  const day = await loadDay();
+  assert.deepEqual(day.gym.equipment!.lists.accessories, ["ab roller", "jump rope", "step-up blocks"]);
+  assert.deepEqual(day.gym.equipment!.kettlebells, [25, 35, 53]);
+  assert.equal((await call(gym, { action: "nuobell", min: 90, max: 80, step: 5 })).status, 400);
+  assert.equal((await call(gym, { action: "list_remove", list: "accessories", item: "anvil" })).status, 400);
+  assert.equal((await call(gym, { action: "explode" })).status, 400);
 });
 
 // ---- tolerance ratings ----------------------------------------------------------------

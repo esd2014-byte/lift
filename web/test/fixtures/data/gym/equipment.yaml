@@ -13,3 +13,8 @@ kettlebells:
     range_lb: [26.5, 70.5]
     increment_lb: 4.4
     status: owned
+
+# A comment the editor must keep.
+accessories:
+  - ab roller
+  - jump rope
