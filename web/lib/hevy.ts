@@ -124,6 +124,41 @@ export type Routine = {
   exercises: Array<RoutineExercise & { title: string }>;
 };
 
+export type ExerciseTemplate = { id: string; title: string; is_custom?: boolean };
+
+/**
+ * The exercise catalogue: stock templates plus the account's custom ones. Unlike
+ * workouts and routines, this endpoint pages by 100 (the hand-run sync script relies
+ * on the same), so the whole catalogue is a handful of calls.
+ */
+export async function listExerciseTemplates(maxPages = 10): Promise<ExerciseTemplate[]> {
+  const out: ExerciseTemplate[] = [];
+  for (let page = 1; page <= maxPages; page++) {
+    const result = await get("/exercise_templates", { page, pageSize: 100 });
+    const batch = (result?.exercise_templates ?? []) as ExerciseTemplate[];
+    out.push(...batch);
+    if (typeof result?.page_count === "number" && page >= result.page_count) break;
+    if (batch.length < 100) break;
+  }
+  return out;
+}
+
+/** A custom exercise, created the way scripts/sync_program_to_hevy.py creates them. */
+export async function createExerciseTemplate(spec: {
+  title: string;
+  muscle_group: string;
+  equipment_category: string;
+}): Promise<void> {
+  await send("POST", "/exercise_templates", {
+    exercise: {
+      title: spec.title,
+      exercise_type: "weight_reps",
+      muscle_group: spec.muscle_group,
+      equipment_category: spec.equipment_category,
+    },
+  });
+}
+
 export async function listRoutines(): Promise<Routine[]> {
   return (await paginate("/routines", "routines")) as Routine[];
 }

@@ -1,7 +1,16 @@
 import { publicMessage } from "./errors";
 import { parse } from "yaml";
 import { readFile, writeFile } from "./store";
-import { createRoutine, listRoutines, updateRoutine, type Routine, type RoutineExercise } from "./hevy";
+import {
+  createExerciseTemplate,
+  createRoutine,
+  listExerciseTemplates,
+  listRoutines,
+  updateRoutine,
+  type ExerciseTemplate,
+  type Routine,
+  type RoutineExercise,
+} from "./hevy";
 import { parseReps, libraryIds, lookupId } from "./voltraSession";
 import { dayTitle, hevyTitle, isVoltraRow, voltraTitle, variantName } from "./session";
 import type { BriefData, Row } from "./types";
@@ -20,11 +29,64 @@ import type { BriefData, Row } from "./types";
 
 const LB_PER_KG = 2.20462;
 const STATE_PATH = "logs/hevy/today-routine.json";
+/** Hevy template ids found outside the account's routines: title (lowercased) -> id. */
+const TEMPLATES_PATH = "logs/hevy/templates.json";
 
+type CustomSpec = { title: string; muscle_group: string; equipment_category: string };
 type HevyMapping = {
   stock?: Record<string, string>;
-  custom?: Record<string, { title: string }>;
+  custom?: Record<string, CustomSpec>;
 };
+
+function cachedTemplates(raw: string | null): Record<string, string> {
+  try {
+    const v = JSON.parse(raw ?? "{}");
+    return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export type TemplateApi = {
+  list: () => Promise<ExerciseTemplate[]>;
+  create: (spec: CustomSpec) => Promise<void>;
+};
+
+/**
+ * Template ids for titles no routine in the account uses yet: a lift that isn't in
+ * the program's per-day routines (a travel-only kettlebell lift, a new ABX exercise).
+ * Looks in the full catalogue, creates a missing `custom:` exercise from the mapping,
+ * and returns only what it newly found, for the cache. Runs only when something is
+ * missing, so an ordinary push costs no extra calls.
+ */
+export async function resolveMissingTemplates(
+  needed: string[],
+  known: Map<string, string>,
+  mappingRaw: string | null,
+  api: TemplateApi
+): Promise<Record<string, string>> {
+  const missing = [...new Set(needed.map((t) => t.toLowerCase()))].filter((t) => !known.has(t));
+  if (!missing.length) return {};
+  const found: Record<string, string> = {};
+  const take = (catalogue: ExerciseTemplate[]) => {
+    for (const t of catalogue) {
+      const k = t.title?.toLowerCase();
+      if (k && missing.includes(k) && !found[k]) found[k] = t.id;
+    }
+  };
+  take(await api.list());
+
+  const custom = Object.values(((parse(mappingRaw ?? "") ?? {}) as HevyMapping).custom ?? {});
+  const toCreate = custom.filter(
+    (c) => c?.title && missing.includes(c.title.toLowerCase()) && !found[c.title.toLowerCase()]
+  );
+  if (toCreate.length) {
+    for (const spec of toCreate) await api.create(spec);
+    // Creating doesn't reliably return the id; read the catalogue again, as the sync script does.
+    take(await api.list());
+  }
+  return found;
+}
 
 /** Library id -> the Hevy exercise title it's logged under. */
 export function hevyTitles(mappingRaw: string | null): Map<string, string> {
@@ -157,10 +219,11 @@ export async function pushHevyRoutine(
     const variant = brief.variants?.[variantKey];
     if (!variant) return { ok: false, error: `no variant ${variantKey}` };
 
-    const [libRaw, mappingRaw, stateRaw, routines] = await Promise.all([
+    const [libRaw, mappingRaw, stateRaw, templatesRaw, routines] = await Promise.all([
       readFile("library/exercises.yaml"),
       readFile("scripts/hevy_mapping.yaml"),
       readFile(STATE_PATH),
+      readFile(TEMPLATES_PATH),
       listRoutines(),
     ]);
 
@@ -169,14 +232,39 @@ export async function pushHevyRoutine(
     const state = stateRaw ? (JSON.parse(stateRaw) as { id?: string }) : {};
 
     // Template ids come from the routines already in the account (the program's
-    // per-day routines use every exercise the program can call for). Not from the
-    // full template catalogue, which is dozens of pages of API calls.
-    const templateIds = new Map<string, string>();
+    // per-day routines use most exercises the program calls for), then from the cache
+    // of ones found before, and only then from the catalogue.
+    const templateIds = new Map<string, string>(Object.entries(cachedTemplates(templatesRaw)));
     for (const r of routines) {
       if (r.id === state.id) continue;
       for (const e of r.exercises ?? []) {
         if (e.title && e.exercise_template_id) templateIds.set(e.title.toLowerCase(), e.exercise_template_id);
       }
+    }
+
+    // Lifts no routine uses yet: find (or create) them once, and remember the ids.
+    const ids = libraryIds(libRaw);
+    const titles = hevyTitles(mappingRaw);
+    const needed = variant.rows
+      .filter((r) => !isVoltraRow(r))
+      .map((r) => titles.get(lookupId(ids, r.name) ?? ""))
+      .filter((t): t is string => Boolean(t));
+    try {
+      const found = await resolveMissingTemplates(needed, templateIds, mappingRaw, {
+        list: () => listExerciseTemplates(),
+        create: (spec) => createExerciseTemplate(spec),
+      });
+      if (Object.keys(found).length) {
+        for (const [t, id] of Object.entries(found)) templateIds.set(t, id);
+        await writeFile(
+          TEMPLATES_PATH,
+          JSON.stringify({ ...cachedTemplates(templatesRaw), ...found }, null, 2) + "\n",
+          `Hevy: remember ${Object.keys(found).length} exercise template id(s)`
+        );
+      }
+    } catch (err) {
+      // A missing lift is skipped and reported, as before; it never blocks the push.
+      console.warn("hevy template lookup failed", err);
     }
 
     // Keep the day's warm-up: the program routine leads with it, the brief doesn't list it.
@@ -185,8 +273,8 @@ export async function pushHevyRoutine(
 
     const { exercises, skipped, voltra } = buildExercises({
       rows: variant.rows,
-      libraryIds: libraryIds(libRaw),
-      hevyTitles: hevyTitles(mappingRaw),
+      libraryIds: ids,
+      hevyTitles: titles,
       templateIds,
       warmup,
     });
