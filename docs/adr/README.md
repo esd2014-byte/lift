@@ -11,3 +11,4 @@ decided, and what it costs. A superseded decision gets a new record, not an edit
 | [0004](0004-storage-behind-one-interface.md) | All data access through one store; a folder store for tests and the demo | Accepted |
 | [0005](0005-python-only-for-program-sync.md) | TypeScript for the app; Python only for the manual Hevy program sync | Accepted |
 | [0006](0006-guessed-loads-are-calibration.md) | A missing Voltra load is estimated from history and shown as calibration | Accepted |
+| [0007](0007-coach-writes-full-days-app-builds-the-rest.md) | The coach writes the full days; the app builds the rest by rule | Accepted |

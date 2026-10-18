@@ -188,6 +188,13 @@ writeFileSync(
   ) + "\n"
 );
 
+// One exercise taken out of rotation in the Gym tab, so Excluded isn't empty.
+const libPath = join(out, "library/exercises.yaml");
+writeFileSync(
+  libPath,
+  readFileSync(libPath, "utf8").replace(/(id: dead_bug,[\s\S]*?tolerance: untested)\}/, "$1, status: inactive}")
+);
+
 // A work trip in progress: today through four days out, a hotel with dumbbells.
 const tripDays = ["A", "B", "C", "A", "B"];
 writeFileSync(

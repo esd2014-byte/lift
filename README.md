@@ -10,12 +10,14 @@ things: catching that drift early, and making real progress visible enough to ke
 going.
 
 <p>
-  <img src="docs/screenshots/today.jpg" width="260" alt="Today: this week's training days and the day's session">
-  <img src="docs/screenshots/session.jpg" width="260" alt="The session, with Voltra loads guessed from history and marked as calibration">
-  <img src="docs/screenshots/progress.jpg" width="260" alt="Strength index across four anchor lifts">
+  <img src="docs/screenshots/today.jpg" width="200" alt="Today: the week strip, a trip in progress, and the coach's pick">
+  <img src="docs/screenshots/session.jpg" width="200" alt="The session: a superset group and Voltra loads guessed from history as calibration">
+  <img src="docs/screenshots/program.jpg" width="200" alt="Program: the rotation with each day's last date, where you are, and the last session">
+  <img src="docs/screenshots/gym.jpg" width="200" alt="Gym: a planned trip with a session per day, and the exercises in rotation">
 </p>
 
-<sub>Screenshots from the demo (<code>npm run demo</code>), which runs on made-up data.</sub>
+<sub>Screenshots from the demo (<code>npm run demo</code>), which runs on made-up data;
+<code>npm run screenshots</code> retakes them.</sub>
 
 ## How it works
 
@@ -27,7 +29,7 @@ flowchart LR
   end
   subgraph Vercel["Vercel (Hobby, $0)"]
     C[Daily cron<br/>/api/cron/*]
-    A[Next.js app<br/>Today · Streak · Body]
+    A[Next.js app<br/>Today · Program · Progress · Gym · Injuries]
   end
   R[Scheduled Claude routine<br/>writes the morning brief]
   D[(Private data repo<br/>program · logs · briefs)]
@@ -50,14 +52,19 @@ flowchart LR
    makes the later runs retries. The brief has a prose part and a JSON part that follows
    [a documented schema](docs/brief-schema.md).
 3. **At the gym.** The app shows the coach's pick and lets you swap variants (as
-   planned, beast mode, quick, traveling, can't train) or pick any other program day,
-   built from the program with weights from your history. **Start** writes the
+   planned, beast mode, quick, traveling, can't train) or pick any other program day:
+   the coach's own version for full days, built by rule from the program for the rest
+   ([ADR 0007](docs/adr/0007-coach-writes-full-days-app-builds-the-rest.md)). **Start** writes the
    routine into Hevy and the session onto the Voltra, with the weights, so both are
    waiting. **End** pulls the finished work back in.
 4. **After.** A note says what the logs can't: a session split across apps, work
-   that never got logged. Injuries are tracked as cards with updates until they
-   resolve. The next morning's brief reads both before it reads the data.
-5. **Always.** The week strip counts distinct training days against a weekly
+   that never got logged, and the app asks when the logs look ambiguous. Injuries are
+   tracked as cards with updates until they resolve. The next morning's brief reads
+   both before it reads the data.
+5. **Around it.** The Gym tab holds the home equipment (the only weights the coach may
+   prescribe) and which exercises are in rotation. A trip sets the dates away and the
+   hotel's gym, proposes a session per day, and converts each one for that gym.
+6. **Always.** The week strip counts distinct training days against a weekly
    target, and a Strength Index tracks estimated 1RM across four anchor lifts.
 
 ## Design decisions
@@ -123,9 +130,15 @@ web/                    Next.js app (App Router), API routes, crons
   lib/store.ts          the one door to the data: GitHub, or a local folder
   lib/metrics.ts        streak and strength-index computation
   lib/loadGuess.ts      calibration loads when the brief leaves one out
+  lib/weights.ts        the loads that exist in the gym; guesses round down to one
+  lib/programDay.ts     program days and their rule-built variants (incl. hotel conversion)
+  lib/recent.ts         last session, last date per day, questions from the logs
+  lib/gym.ts            equipment and exercise-rotation edits that keep the YAML's comments
+  lib/trips.ts          trips: proposed sessions per day, overrides, home early
   lib/markdown.ts       brief renderer (the trust boundary for model output)
   test/                 unit and route tests; fixtures/data is a synthetic data repo
   scripts/demo-data.mjs builds the demo's made-up data
+  scripts/screenshots.mjs retakes the README screenshots from the demo
 scripts/                Python: rebuilds the program's routines in Hevy (run by hand)
 docs/adr/               architecture decision records
 docs/                   brief schema, architecture review, screenshots
